@@ -1,0 +1,19 @@
+{
+  "nav": {
+    "dashboard": "Übersicht",
+    "logs": "Gerüstbuch",
+    "requests": "Gerüstanforderungen",
+    "diary": "Bautagebuch",
+    "deliveries": "LKW-Lieferungen",
+    "inspections": "Sicherheitsprüfungen",
+    "materials": "Materialstammdaten",
+    "ai_assistant": "KI-Assistent",
+    "reports": "Berichte",
+    "team": "Team",
+    "settings": "Einstellungen"
+  },
+  "common": {
+    "install_app": "App installieren",
+    "logout": "Abmelden"
+  }
+}

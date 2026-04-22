@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* PREMIUM INDUSTRIAL DESIGN SYSTEM [BETA] */
+    --background: 0 0% 4%; /* #0a0a0a - Deep Black */
+    --foreground: 0 0% 98%;
+    
+    --primary: 24 95% 53%; /* #f97316 - Industrial Orange */
+    --primary-foreground: 0 0% 100%;
+    
+    --card: 0 0% 7%; /* #121212 */
+    --card-foreground: 0 0% 98%;
+    
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
+    
+    --secondary: 0 0% 12%; /* #1e1e1e */
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 0 0% 12%;
+    --muted-foreground: 215 20% 65%;
+    
+    --accent: 24 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 24 95% 53%;
+    
+    --radius: 0.75rem;
+  }
+
+  /* Force dark mode tokens as the default for the Premium look */
+  .dark {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(24, 95%, 53%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(217, 31%, 15%, 0.1) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-balance text-white font-bold tracking-tight;
+    letter-spacing: -0.03em;
+  }
+  
+  p {
+    @apply max-w-[65ch] leading-relaxed text-muted-foreground;
+  }
+}
+
+@layer utilities {
+  .section-padding {
+    @apply py-[80px] px-[40px];
+  }
+  
+  .container-default {
+    @apply max-w-7xl mx-auto;
+  }
+  
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-[24px] md:p-[32px] rounded-[16px] transition-all duration-300 hover:border-primary/50 hover:bg-white/[0.08];
+  }
+
+  .industrial-gradient {
+    @apply bg-gradient-to-br from-[#f97316] to-[#ea580c];
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px rgba(249, 115, 22, 0.4);
+  }
+}

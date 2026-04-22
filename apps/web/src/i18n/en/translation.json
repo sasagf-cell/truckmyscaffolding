@@ -1,0 +1,19 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "logs": "Scaffold Logs",
+    "requests": "Scaffold Requests",
+    "diary": "Site Diary",
+    "deliveries": "Truck Deliveries",
+    "inspections": "Safety Inspections",
+    "materials": "Master Data",
+    "ai_assistant": "AI Assistant",
+    "reports": "Reports",
+    "team": "Team",
+    "settings": "Settings"
+  },
+  "common": {
+    "install_app": "Install App",
+    "logout": "Log out"
+  }
+}
