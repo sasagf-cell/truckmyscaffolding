@@ -27,7 +27,7 @@ migrate((app) => {
         "name": "project_id",
         "type": "relation",
         "required": true,
-        "collectionId": "pbc_6793512535", // Using generic or we assume the name matches. Wait, project collection ID is unknown. I'll use text field if relation ID is not strictly known, or look up 'projects' collection.
+        "collectionId": "pbc_6793512535",
         "cascadeDelete": true,
         "minSelect": 1,
         "maxSelect": 1
@@ -214,6 +214,12 @@ migrate((app) => {
         "id": "date_qr_exp",
         "name": "expires_at",
         "type": "date"
+      },
+      {
+        "id": "bool_qr_used",
+        "name": "used",
+        "type": "bool",
+        "required": false
       },
       {
         "id": "autodate_qr_c",

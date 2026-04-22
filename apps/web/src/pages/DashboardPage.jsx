@@ -30,6 +30,7 @@ import { useAlerts } from '@/hooks/useAlerts.js';
 import pb from '@/lib/pocketbaseClient';
 import Scaffold3DPreview from '@/components/Scaffold3DPreview.jsx';
 import ScaffoldQRCode from '@/components/ScaffoldQRCode.jsx';
+import WorkerHoursWidget from '@/components/WorkerHoursWidget.jsx';
 
 const DashboardPage = () => {
   const [searchParams] = useSearchParams();
@@ -225,6 +226,7 @@ const DashboardPage = () => {
             </div>
           </div>
         </div>
+        <WorkerHoursWidget projectId={selectedProject?.id} />
       </div>
 
       {/* Project Risk Score Widget */}

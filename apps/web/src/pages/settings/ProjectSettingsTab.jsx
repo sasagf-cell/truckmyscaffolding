@@ -8,12 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, QrCode } from 'lucide-react';
+import QRGeneratorModal from '@/components/QRGeneratorModal.jsx';
 
 const ProjectSettingsTab = () => {
   const { selectedProject } = useOutletContext();
   const { getProjectSettings, updateProjectSettings, loading } = useSettings();
-  
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+
   const [project, setProject] = useState({
     name: '',
     location: '',
@@ -69,8 +71,15 @@ const ProjectSettingsTab = () => {
     <div className="space-y-6 animate-in fade-in duration-300">
       <Card>
         <CardHeader>
-          <CardTitle>Project Settings</CardTitle>
-          <CardDescription>Manage details and status for the currently selected project.</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Project Settings</CardTitle>
+              <CardDescription>Manage details and status for the currently selected project.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setQrModalOpen(true)}>
+              <QrCode className="w-4 h-4 mr-1" /> QR Code
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSave} className="space-y-6">
@@ -144,6 +153,7 @@ const ProjectSettingsTab = () => {
           </form>
         </CardContent>
       </Card>
+      <QRGeneratorModal open={qrModalOpen} onOpenChange={setQrModalOpen} project={selectedProject} />
     </div>
   );
 };
