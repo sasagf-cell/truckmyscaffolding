@@ -53,6 +53,8 @@ const SettingsPage = React.lazy(() => import('@/pages/SettingsPage.jsx'));
 const ScaffoldLogsPage = React.lazy(() => import('@/pages/ScaffoldLogsPage.jsx'));
 const MaterialMasterDataPage = React.lazy(() => import('@/pages/MaterialMasterDataPage.jsx'));
 const SafetyInspectionsPage = React.lazy(() => import('@/features/inspections/src/SafetyInspectionsPage.jsx'));
+const WorkerHoursPage = React.lazy(() => import('@/pages/WorkerHoursPage.jsx'));
+const JoinProjectPage = React.lazy(() => import('@/pages/JoinProjectPage.jsx'));
 
 
 const LoadingFallback = () => <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -106,6 +108,7 @@ function AppContent() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/join" element={<SubcontractorSignupPage />} />
+            <Route path="/join/:token" element={<JoinProjectPage />} />
             <Route path="/unsubscribe-success" element={<UnsubscribeSuccessPage />} />
             <Route path="/dev/seo-audit" element={<SEOAuditPage />} />
             
@@ -135,6 +138,7 @@ function AppContent() {
             <Route path="/scaffold-logs" element={<ScaffoldLogsPage />} />
             <Route path="/material-master-data" element={<MaterialMasterDataPage />} />
             <Route path="/dashboard/inspections" element={<SafetyInspectionsPage />} />
+            <Route path="/dashboard/worker-hours" element={<WorkerHoursPage />} />
 
             
             <Route path="/dashboard/scaffold-requests" element={<ScaffoldRequestsList />} />

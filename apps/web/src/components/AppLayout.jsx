@@ -2,18 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, Calendar, Package, MessageSquare, BarChart3, Users, Settings, Menu, X, Bell, ChevronDown, LogOut, Download, BookOpen, Database, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, FileText, Calendar, Package, MessageSquare, BarChart3, Users, Settings, Menu, X, Bell, ChevronDown, LogOut, Download, BookOpen, Database, ShieldCheck, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import pb from '@/lib/pocketbaseClient';
-import { 
-  canViewScaffoldRequests, 
-  canViewSiteDiary, 
-  canViewMaterialDeliveries, 
-  canViewReports, 
+import {
+  canViewScaffoldRequests,
+  canViewSiteDiary,
+  canViewMaterialDeliveries,
+  canViewReports,
   canViewTeam,
   canViewScaffoldLogs,
   canViewMaterialMasterData,
-  canViewInspections
+  canViewInspections,
+  canViewWorkerHours
 } from '@/lib/permissions.js';
 import OfflineBanner from '@/components/OfflineBanner.jsx';
 import Logo from '@/components/Logo.jsx';
@@ -128,6 +129,7 @@ const AppLayout = () => {
     { path: '/dashboard/site-diary', icon: Calendar, label: t('nav.diary'), show: canViewSiteDiary(currentUser, subcontractorRecord) },
     { path: '/dashboard/material-deliveries', icon: Package, label: t('nav.deliveries'), show: canViewMaterialDeliveries(currentUser, subcontractorRecord) },
     { path: '/dashboard/inspections', icon: ShieldCheck, label: t('nav.inspections'), show: canViewInspections(currentUser) },
+    { path: '/dashboard/worker-hours', icon: Clock, label: 'Worker Hours', show: canViewWorkerHours(currentUser) },
     { path: '/material-master-data', icon: Database, label: t('nav.materials'), show: canViewMaterialMasterData ? canViewMaterialMasterData(currentUser) : true },
     { path: '/dashboard/ai-assistant', icon: MessageSquare, label: t('nav.ai_assistant'), show: true }, // AI assistant available to all
     { path: '/dashboard/reports', icon: BarChart3, label: t('nav.reports'), show: canViewReports(currentUser, subcontractorRecord) },

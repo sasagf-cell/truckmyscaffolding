@@ -36,3 +36,8 @@ export const canViewInspections = (user) => {
   return user.role === 'Coordinator';
 };
 
+export const canViewWorkerHours = (user) => {
+  if (!user) return false;
+  return user.role === 'Coordinator';
+};
+

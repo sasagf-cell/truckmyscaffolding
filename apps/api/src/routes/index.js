@@ -10,6 +10,8 @@ import reportsRouter from './reports.js';
 import usersRouter from './users.js';
 import billingRouter from './billing.js';
 import emailRouter from './email.js';
+import workerHoursRouter from './worker-hours.js';
+import qrRouter from './qr.js';
 
 const router = Router();
 
@@ -25,6 +27,8 @@ export default () => {
   router.use('/users', usersRouter);
   router.use('/billing', billingRouter);
   router.use('/email', emailRouter);
+  router.use('/worker-hours', workerHoursRouter);
+  router.use('/api', qrRouter);
 
   return router;
 };
