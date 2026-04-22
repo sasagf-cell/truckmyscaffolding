@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
+import React, { useState } from 'react';
+import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,13 +39,26 @@ const QRGeneratorModal = ({ open, onOpenChange, project }) => {
     toast.success('Link copied to clipboard');
   };
 
-  const downloadQR = () => {
+  const downloadPNG = () => {
     const canvas = document.getElementById('qr-canvas');
     if (!canvas) return;
     const a = document.createElement('a');
     a.href = canvas.toDataURL('image/png');
     a.download = `${project?.name || 'project'}-qr.png`;
     a.click();
+  };
+
+  const downloadSVG = () => {
+    const svg = document.getElementById('qr-svg');
+    if (!svg) return;
+    const serializer = new XMLSerializer();
+    const svgStr = serializer.serializeToString(svg);
+    const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${project?.name || 'project'}-qr.svg`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   const handleClose = () => {
@@ -75,6 +88,9 @@ const QRGeneratorModal = ({ open, onOpenChange, project }) => {
           <div className="space-y-4">
             <div className="flex justify-center p-4 bg-white rounded-lg">
               <QRCodeCanvas id="qr-canvas" value={joinUrl} size={200} includeMargin />
+              <div className="hidden">
+                <QRCodeSVG id="qr-svg" value={joinUrl} size={200} includeMargin />
+              </div>
             </div>
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -87,8 +103,11 @@ const QRGeneratorModal = ({ open, onOpenChange, project }) => {
               <Button variant="outline" className="flex-1" onClick={copyLink}>
                 <Copy className="w-4 h-4 mr-2" /> Copy Link
               </Button>
-              <Button variant="outline" className="flex-1" onClick={downloadQR}>
-                <Download className="w-4 h-4 mr-2" /> Download
+              <Button variant="outline" className="flex-1" onClick={downloadPNG}>
+                <Download className="w-4 h-4 mr-2" /> PNG
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={downloadSVG}>
+                <Download className="w-4 h-4 mr-2" /> SVG
               </Button>
             </div>
 
