@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 import Pocketbase from 'pocketbase';
 
-const pocketbaseClient = new Pocketbase('http://localhost:8090');
+const pocketbaseClient = new Pocketbase(process.env.POCKETBASE_URL || 'http://localhost:8090');
 
 async function connectToPocketBase() {
   for (let i = 0; i < 5; i++) {
