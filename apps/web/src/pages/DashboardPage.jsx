@@ -64,22 +64,28 @@ const DashboardPage = () => {
   
   const riskScore = calculateRiskScore();
 
-  // Trend Indicator: compare today's score vs yesterday's score stored in localStorage (keyed by date)
+  // Trend Indicator: compare today's score vs yesterday's score.
+  // Storage: localStorage keyed by projectId + date (per-project, 7-day rolling window).
+  // TODO Sprint 5: migrate to PocketBase `project_risk_history` collection with daily cron snapshot
+  // so that trend survives cache clears and cross-browser sessions.
   const [riskTrend, setRiskTrend] = useState(null); // 'up' | 'down' | 'stable' | null
   const [prevDayScore, setPrevDayScore] = useState(null);
   useEffect(() => {
+    // Guard: only run after data has loaded and project is selected
     if (!selectedProject || loading) return;
     const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     const storageKey = `riskScore_${selectedProject.id}`;
     let history = {};
     try { history = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch {}
-    // Persist today's score
-    history[today] = riskScore;
-    // Keep only last 7 days to avoid unbounded growth
-    const keys = Object.keys(history).sort();
-    if (keys.length > 7) keys.slice(0, keys.length - 7).forEach(k => delete history[k]);
-    localStorage.setItem(storageKey, JSON.stringify(history));
+    // Guard: only write to localStorage if today's value has actually changed
+    if (history[today] !== riskScore) {
+      history[today] = riskScore;
+      // Keep only last 7 days to avoid unbounded growth
+      const keys = Object.keys(history).sort();
+      if (keys.length > 7) keys.slice(0, keys.length - 7).forEach(k => delete history[k]);
+      localStorage.setItem(storageKey, JSON.stringify(history));
+    }
     // Compare with yesterday
     if (history[yesterday] !== undefined) {
       const prev = history[yesterday];
@@ -342,13 +348,14 @@ const DashboardPage = () => {
                 <Badge variant="outline" className={`ml-2 ${riskStatus.color} ${riskStatus.border}`}>
                   {riskStatus.label}
                 </Badge>
-                {/* Why? button */}
+                {/* Why? button — text label added for discoverability (non-tech users) */}
                 <button
                   onClick={() => setShowWhyModal(true)}
-                  className="ml-1 text-muted-foreground hover:text-white transition-colors"
-                  title="Why is my score this value?"
+                  className="ml-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-white transition-colors border border-white/10 hover:border-white/30 rounded-md px-2 py-1"
+                  title="How is this score calculated?"
                 >
-                  <HelpCircle className="w-4 h-4" />
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  How is this calculated?
                 </button>
               </div>
               
