@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, useOutletContext } from 'react-router-dom';
 import {
   ClipboardList,
@@ -17,7 +17,9 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
-  Plus
+  Plus,
+  TrendingDown,
+  HelpCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -60,7 +62,25 @@ const DashboardPage = () => {
   };
   
   const riskScore = calculateRiskScore();
-  
+
+  // Trend Indicator: compare current score to previous session value stored in sessionStorage
+  const prevRiskScoreRef = useRef(null);
+  const [riskTrend, setRiskTrend] = useState(null); // 'up' | 'down' | 'stable'
+  useEffect(() => {
+    const stored = sessionStorage.getItem('prevRiskScore');
+    if (stored !== null) {
+      const prev = parseFloat(stored);
+      prevRiskScoreRef.current = prev;
+      if (riskScore > prev) setRiskTrend('up');
+      else if (riskScore < prev) setRiskTrend('down');
+      else setRiskTrend('stable');
+    }
+    sessionStorage.setItem('prevRiskScore', String(riskScore));
+  }, [riskScore]);
+
+  // Why? Explainer modal state
+  const [showWhyModal, setShowWhyModal] = useState(false);
+
   const getRiskStatus = (score) => {
     if (score < 40) return { label: 'High Risk', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20', bar: 'bg-red-500', icon: ShieldAlert };
     if (score < 70) return { label: 'Medium Risk', color: 'text-yellow-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', bar: 'bg-yellow-500', icon: AlertTriangle };
@@ -277,9 +297,28 @@ const DashboardPage = () => {
               <div className="flex items-center gap-2">
                 <RiskIcon className={`w-6 h-6 ${riskStatus.color}`} />
                 <h3 className="text-xl font-bold tracking-tight text-white">Project Risk Score</h3>
+                {/* Trend Indicator */}
+                {riskTrend === 'up' && (
+                  <span className="flex items-center gap-1 text-green-400 text-sm font-semibold" title="Score improved since last visit">
+                    <TrendingUp className="w-4 h-4" /> ↑
+                  </span>
+                )}
+                {riskTrend === 'down' && (
+                  <span className="flex items-center gap-1 text-red-400 text-sm font-semibold" title="Score declined since last visit">
+                    <TrendingDown className="w-4 h-4" /> ↓
+                  </span>
+                )}
                 <Badge variant="outline" className={`ml-2 ${riskStatus.color} ${riskStatus.border}`}>
                   {riskStatus.label}
                 </Badge>
+                {/* Why? button */}
+                <button
+                  onClick={() => setShowWhyModal(true)}
+                  className="ml-1 text-muted-foreground hover:text-white transition-colors"
+                  title="Why is my score this value?"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </button>
               </div>
               
               <div className="space-y-2">
@@ -313,6 +352,75 @@ const DashboardPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Why? Explainer Modal */}
+      {showWhyModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowWhyModal(false)}
+        >
+          <div
+            className="relative bg-[#0f1117] border border-white/10 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-primary" />
+                Why is my Risk Score {riskScore}?
+              </h2>
+              <button onClick={() => setShowWhyModal(false)} className="text-muted-foreground hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Your score starts at <span className="text-white font-semibold">100</span> and is reduced by the following active penalties:
+            </p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-white">Overdue Inspections</p>
+                  <p className="text-xs text-muted-foreground">−15 pts each</p>
+                </div>
+                <span className={`text-lg font-bold ${riskMetrics.overdueInspections > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                  {riskMetrics.overdueInspections > 0 ? `−${riskMetrics.overdueInspections * 15}` : '0'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-white">Pending Requests &gt;48h</p>
+                  <p className="text-xs text-muted-foreground">−10 pts each</p>
+                </div>
+                <span className={`text-lg font-bold ${riskMetrics.pendingRequestsOver48h > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                  {riskMetrics.pendingRequestsOver48h > 0 ? `−${riskMetrics.pendingRequestsOver48h * 10}` : '0'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-white">Missing Diary Entries</p>
+                  <p className="text-xs text-muted-foreground">−5 pts each (last 7 weekdays)</p>
+                </div>
+                <span className={`text-lg font-bold ${riskMetrics.missingDiaryEntries > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                  {riskMetrics.missingDiaryEntries > 0 ? `−${riskMetrics.missingDiaryEntries * 5}` : '0'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-white">Active Alerts</p>
+                  <p className="text-xs text-muted-foreground">−8 pts each</p>
+                </div>
+                <span className={`text-lg font-bold ${alertCount > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                  {alertCount > 0 ? `−${alertCount * 8}` : '0'}
+                </span>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Final Score</span>
+              <span className={`text-2xl font-bold ${riskStatus.color}`}>{riskScore} / 100</span>
+            </div>
+            <Button className="mt-4 w-full" onClick={() => setShowWhyModal(false)}>Got it</Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
