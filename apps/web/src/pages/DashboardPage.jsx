@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useOutletContext } from 'react-router-dom';
 import {
   ClipboardList,
@@ -25,6 +25,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import StripeSuccessPage from '@/pages/StripeSuccessPage.jsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -63,23 +64,48 @@ const DashboardPage = () => {
   
   const riskScore = calculateRiskScore();
 
-  // Trend Indicator: compare current score to previous session value stored in sessionStorage
-  const prevRiskScoreRef = useRef(null);
-  const [riskTrend, setRiskTrend] = useState(null); // 'up' | 'down' | 'stable'
+  // Trend Indicator: compare today's score vs yesterday's score stored in localStorage (keyed by date)
+  const [riskTrend, setRiskTrend] = useState(null); // 'up' | 'down' | 'stable' | null
+  const [prevDayScore, setPrevDayScore] = useState(null);
   useEffect(() => {
-    const stored = sessionStorage.getItem('prevRiskScore');
-    if (stored !== null) {
-      const prev = parseFloat(stored);
-      prevRiskScoreRef.current = prev;
+    if (!selectedProject || loading) return;
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const storageKey = `riskScore_${selectedProject.id}`;
+    let history = {};
+    try { history = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch {}
+    // Persist today's score
+    history[today] = riskScore;
+    // Keep only last 7 days to avoid unbounded growth
+    const keys = Object.keys(history).sort();
+    if (keys.length > 7) keys.slice(0, keys.length - 7).forEach(k => delete history[k]);
+    localStorage.setItem(storageKey, JSON.stringify(history));
+    // Compare with yesterday
+    if (history[yesterday] !== undefined) {
+      const prev = history[yesterday];
+      setPrevDayScore(prev);
       if (riskScore > prev) setRiskTrend('up');
       else if (riskScore < prev) setRiskTrend('down');
       else setRiskTrend('stable');
+    } else {
+      setRiskTrend(null); // No data for yesterday — neutral
     }
-    sessionStorage.setItem('prevRiskScore', String(riskScore));
-  }, [riskScore]);
+  }, [riskScore, selectedProject, loading]);
 
-  // Why? Explainer modal state
+  // Why? Dialog state
   const [showWhyModal, setShowWhyModal] = useState(false);
+
+  // AI Recommendation based on worst penalty
+  const getAiRecommendation = () => {
+    const penalties = [
+      { label: 'pending requests older than 48h', value: riskMetrics.pendingRequestsOver48h * 10, action: 'Review and resolve all open scaffold requests that have been pending for over 48 hours.' },
+      { label: 'missing diary entries', value: riskMetrics.missingDiaryEntries * 5, action: 'Log missing site diary entries for the past 7 weekdays to restore full compliance.' },
+      { label: 'active alerts', value: alertCount * 8, action: 'Address and dismiss active safety alerts via the AI Assistant page.' },
+    ];
+    const worst = penalties.reduce((a, b) => (b.value > a.value ? b : a), penalties[0]);
+    if (worst.value === 0) return 'Your project is fully compliant. Keep up the daily diary entries and resolve requests promptly to maintain a perfect score.';
+    return worst.action;
+  };
 
   const getRiskStatus = (score) => {
     if (score < 40) return { label: 'High Risk', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20', bar: 'bg-red-500', icon: ShieldAlert };
@@ -297,15 +323,20 @@ const DashboardPage = () => {
               <div className="flex items-center gap-2">
                 <RiskIcon className={`w-6 h-6 ${riskStatus.color}`} />
                 <h3 className="text-xl font-bold tracking-tight text-white">Project Risk Score</h3>
-                {/* Trend Indicator */}
+                {/* Trend Indicator vs previous day */}
                 {riskTrend === 'up' && (
-                  <span className="flex items-center gap-1 text-green-400 text-sm font-semibold" title="Score improved since last visit">
+                  <span className="flex items-center gap-1 text-green-400 text-sm font-semibold" title={`Up from ${prevDayScore} yesterday`}>
                     <TrendingUp className="w-4 h-4" /> ↑
                   </span>
                 )}
                 {riskTrend === 'down' && (
-                  <span className="flex items-center gap-1 text-red-400 text-sm font-semibold" title="Score declined since last visit">
+                  <span className="flex items-center gap-1 text-red-400 text-sm font-semibold" title={`Down from ${prevDayScore} yesterday`}>
                     <TrendingDown className="w-4 h-4" /> ↓
+                  </span>
+                )}
+                {riskTrend === 'stable' && (
+                  <span className="flex items-center gap-1 text-muted-foreground text-sm font-semibold" title="No change since yesterday">
+                    → stable
                   </span>
                 )}
                 <Badge variant="outline" className={`ml-2 ${riskStatus.color} ${riskStatus.border}`}>
@@ -353,74 +384,68 @@ const DashboardPage = () => {
         </CardContent>
       </Card>
 
-      {/* Why? Explainer Modal */}
-      {showWhyModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => setShowWhyModal(false)}
-        >
-          <div
-            className="relative bg-[#0f1117] border border-white/10 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <HelpCircle className="w-5 h-5 text-primary" />
-                Why is my Risk Score {riskScore}?
-              </h2>
-              <button onClick={() => setShowWhyModal(false)} className="text-muted-foreground hover:text-white transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+      {/* Why? Explainer — Shadcn Dialog */}
+      <Dialog open={showWhyModal} onOpenChange={setShowWhyModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-primary" />
+              Why is my Risk Score {riskScore}?
+            </DialogTitle>
+            <DialogDescription>
+              Your score starts at <strong>100</strong> and is reduced by the following active penalties:
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 my-2">
+            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Pending Requests (&gt;48h)</p>
+                <p className="text-xs text-muted-foreground">−10 pts each &nbsp;·&nbsp; {riskMetrics.pendingRequestsOver48h} active</p>
+              </div>
+              <span className={`text-lg font-bold ${riskMetrics.pendingRequestsOver48h > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                {riskMetrics.pendingRequestsOver48h > 0 ? `−${riskMetrics.pendingRequestsOver48h * 10}` : '0'}
+              </span>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Your score starts at <span className="text-white font-semibold">100</span> and is reduced by the following active penalties:
-            </p>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-white">Overdue Inspections</p>
-                  <p className="text-xs text-muted-foreground">−15 pts each</p>
-                </div>
-                <span className={`text-lg font-bold ${riskMetrics.overdueInspections > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                  {riskMetrics.overdueInspections > 0 ? `−${riskMetrics.overdueInspections * 15}` : '0'}
-                </span>
+            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Missing Diary Entries</p>
+                <p className="text-xs text-muted-foreground">−5 pts each &nbsp;·&nbsp; last 7 weekdays</p>
               </div>
-              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-white">Pending Requests &gt;48h</p>
-                  <p className="text-xs text-muted-foreground">−10 pts each</p>
-                </div>
-                <span className={`text-lg font-bold ${riskMetrics.pendingRequestsOver48h > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
-                  {riskMetrics.pendingRequestsOver48h > 0 ? `−${riskMetrics.pendingRequestsOver48h * 10}` : '0'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-white">Missing Diary Entries</p>
-                  <p className="text-xs text-muted-foreground">−5 pts each (last 7 weekdays)</p>
-                </div>
-                <span className={`text-lg font-bold ${riskMetrics.missingDiaryEntries > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
-                  {riskMetrics.missingDiaryEntries > 0 ? `−${riskMetrics.missingDiaryEntries * 5}` : '0'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-white">Active Alerts</p>
-                  <p className="text-xs text-muted-foreground">−8 pts each</p>
-                </div>
-                <span className={`text-lg font-bold ${alertCount > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                  {alertCount > 0 ? `−${alertCount * 8}` : '0'}
-                </span>
-              </div>
+              <span className={`text-lg font-bold ${riskMetrics.missingDiaryEntries > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                {riskMetrics.missingDiaryEntries > 0 ? `−${riskMetrics.missingDiaryEntries * 5}` : '0'}
+              </span>
             </div>
-            <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Active Alerts</p>
+                <p className="text-xs text-muted-foreground">−8 pts each &nbsp;·&nbsp; {alertCount} active</p>
+              </div>
+              <span className={`text-lg font-bold ${alertCount > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                {alertCount > 0 ? `−${alertCount * 8}` : '0'}
+              </span>
+            </div>
+
+            <div className="pt-3 border-t border-white/10 flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Final Score</span>
               <span className={`text-2xl font-bold ${riskStatus.color}`}>{riskScore} / 100</span>
             </div>
-            <Button className="mt-4 w-full" onClick={() => setShowWhyModal(false)}>Got it</Button>
           </div>
-        </div>
-      )}
+
+          {/* AI Recommendation */}
+          <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex gap-3">
+            <TrendingUp className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">AI Recommendation</p>
+              <p className="text-sm text-muted-foreground">{getAiRecommendation()}</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowWhyModal(false)} className="w-full">Got it</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
