@@ -46,15 +46,16 @@ const DashboardPage = () => {
 
   const [riskMetrics, setRiskMetrics] = useState({
     overdueInspections: 0,
-    pendingRequestsOver48h: 1, // Mock
-    missingDiaryEntries: 2, // Mock
+    pendingRequestsOver48h: 0,
+    missingDiaryEntries: 0,
   });
 
   const calculateRiskScore = () => {
-    const score = 100 
-      - (riskMetrics.overdueInspections * 15) 
-      - (riskMetrics.pendingRequestsOver48h * 10) 
-      - (riskMetrics.missingDiaryEntries * 5);
+    const score = 100
+      - (riskMetrics.overdueInspections * 15)
+      - (riskMetrics.pendingRequestsOver48h * 10)
+      - (riskMetrics.missingDiaryEntries * 5)
+      - (alertCount * 8);
     return Math.max(0, Math.min(100, score));
   };
   
@@ -106,6 +107,42 @@ const DashboardPage = () => {
         }));
 
         setRecentActivity(activities);
+
+        // Risk Score — real data
+        const now = new Date();
+        const cutoff48h = new Date(now - 48 * 60 * 60 * 1000).toISOString().replace('T', ' ');
+
+        const last7Days = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(now);
+          d.setDate(d.getDate() - i);
+          return d.toISOString().split('T')[0];
+        });
+        const weekdays = last7Days.filter(d => {
+          const day = new Date(d).getDay();
+          return day !== 0 && day !== 6;
+        });
+
+        const [pendingReqs, recentDiary] = await Promise.all([
+          pb.collection('scaffold_requests').getFullList({
+            filter: `projectId="${selectedProject.id}" && status="Pending" && created<"${cutoff48h}"`,
+            $autoCancel: false
+          }),
+          pb.collection('diary_entries').getFullList({
+            filter: `project_id="${selectedProject.id}" && date>="${weekdays[weekdays.length - 1]}"`,
+            fields: 'date',
+            $autoCancel: false
+          })
+        ]);
+
+        const diaryDates = new Set(recentDiary.map(e => e.date?.split(' ')[0]));
+        const missingDays = weekdays.filter(d => !diaryDates.has(d)).length;
+
+        setRiskMetrics({
+          overdueInspections: 0,
+          pendingRequestsOver48h: pendingReqs.length,
+          missingDiaryEntries: missingDays,
+        });
+
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
