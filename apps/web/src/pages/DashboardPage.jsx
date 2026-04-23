@@ -1,9 +1,25 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useOutletContext } from 'react-router-dom';
 import {
-  ClipboardList, BookOpen, Truck, AlertTriangle, ArrowRight, TrendingUp,
-  Clock, CheckCircle2, BellRing, X, Monitor, Activity, Shield,
-  ShieldAlert, ShieldCheck, Plus, TrendingDown, HelpCircle
+  ClipboardList,
+  BookOpen,
+  Truck,
+  AlertTriangle,
+  ArrowRight,
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  BellRing,
+  X,
+  Monitor,
+  Activity,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  Plus,
+  TrendingDown,
+  HelpCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -24,7 +40,7 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const { selectedProject } = useOutletContext();
   const { fetchAlertCount } = useAlerts(selectedProject?.id);
-
+  
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [recentActivity, setRecentActivity] = useState([]);
@@ -45,23 +61,32 @@ const DashboardPage = () => {
       - (alertCount * 8);
     return Math.max(0, Math.min(100, score));
   };
-
+  
   const riskScore = calculateRiskScore();
 
-  // Trend Indicator: compare today vs yesterday (localStorage, keyed by projectId + date)
-  const [riskTrend, setRiskTrend] = useState(null);
+  // Trend Indicator: compare today's score vs yesterday's score.
+  // Storage: localStorage keyed by projectId + date (per-project, 7-day rolling window).
+  // TODO Sprint 5: migrate to PocketBase `project_risk_history` collection with daily cron snapshot
+  // so that trend survives cache clears and cross-browser sessions.
+  const [riskTrend, setRiskTrend] = useState(null); // 'up' | 'down' | 'stable' | null
   const [prevDayScore, setPrevDayScore] = useState(null);
   useEffect(() => {
+    // Guard: only run after data has loaded and project is selected
     if (!selectedProject || loading) return;
     const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     const storageKey = `riskScore_${selectedProject.id}`;
     let history = {};
     try { history = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch {}
-    history[today] = riskScore;
-    const keys = Object.keys(history).sort();
-    if (keys.length > 7) keys.slice(0, keys.length - 7).forEach(k => delete history[k]);
-    localStorage.setItem(storageKey, JSON.stringify(history));
+    // Guard: only write to localStorage if today's value has actually changed
+    if (history[today] !== riskScore) {
+      history[today] = riskScore;
+      // Keep only last 7 days to avoid unbounded growth
+      const keys = Object.keys(history).sort();
+      if (keys.length > 7) keys.slice(0, keys.length - 7).forEach(k => delete history[k]);
+      localStorage.setItem(storageKey, JSON.stringify(history));
+    }
+    // Compare with yesterday
     if (history[yesterday] !== undefined) {
       const prev = history[yesterday];
       setPrevDayScore(prev);
@@ -69,17 +94,19 @@ const DashboardPage = () => {
       else if (riskScore < prev) setRiskTrend('down');
       else setRiskTrend('stable');
     } else {
-      setRiskTrend(null);
+      setRiskTrend(null); // No data for yesterday — neutral
     }
   }, [riskScore, selectedProject, loading]);
 
+  // Why? Dialog state
   const [showWhyModal, setShowWhyModal] = useState(false);
 
+  // AI Recommendation based on worst penalty
   const getAiRecommendation = () => {
     const penalties = [
-      { value: riskMetrics.pendingRequestsOver48h * 10, action: 'Review and resolve all open scaffold requests that have been pending for over 48 hours.' },
-      { value: riskMetrics.missingDiaryEntries * 5, action: 'Log missing site diary entries for the past 7 weekdays to restore full compliance.' },
-      { value: alertCount * 8, action: 'Address and dismiss active safety alerts via the AI Assistant page.' },
+      { label: 'pending requests older than 48h', value: riskMetrics.pendingRequestsOver48h * 10, action: 'Review and resolve all open scaffold requests that have been pending for over 48 hours.' },
+      { label: 'missing diary entries', value: riskMetrics.missingDiaryEntries * 5, action: 'Log missing site diary entries for the past 7 weekdays to restore full compliance.' },
+      { label: 'active alerts', value: alertCount * 8, action: 'Address and dismiss active safety alerts via the AI Assistant page.' },
     ];
     const worst = penalties.reduce((a, b) => (b.value > a.value ? b : a), penalties[0]);
     if (worst.value === 0) return 'Your project is fully compliant. Keep up the daily diary entries and resolve requests promptly to maintain a perfect score.';
@@ -91,7 +118,7 @@ const DashboardPage = () => {
     if (score < 70) return { label: 'Medium Risk', color: 'text-yellow-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', bar: 'bg-yellow-500', icon: AlertTriangle };
     return { label: 'Low Risk', color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20', bar: 'bg-green-500', icon: ShieldCheck };
   };
-
+  
   const riskStatus = getRiskStatus(riskScore);
   const RiskIcon = riskStatus.icon;
 
@@ -100,47 +127,99 @@ const DashboardPage = () => {
       if (!selectedProject) return;
       setLoading(true);
       try {
+        // Fetch basic stats
         const [requests, diary, deliveries, alerts] = await Promise.all([
           pb.collection('scaffold_requests').getList(1, 1, { filter: `projectId="${selectedProject.id}"`, $autoCancel: false }),
           pb.collection('diary_entries').getList(1, 1, { filter: `project_id="${selectedProject.id}"`, $autoCancel: false }),
           pb.collection('material_deliveries').getList(1, 1, { filter: `project_id="${selectedProject.id}"`, $autoCancel: false }),
           fetchAlertCount()
         ]);
-        setStats({ totalRequests: requests.totalItems, totalDiaryEntries: diary.totalItems, totalDeliveries: deliveries.totalItems });
+
+        setStats({
+          totalRequests: requests.totalItems,
+          totalDiaryEntries: diary.totalItems,
+          totalDeliveries: deliveries.totalItems,
+        });
+
         setAlertCount(alerts.all || 0);
 
-        const recentReqs = await pb.collection('scaffold_requests').getList(1, 3, { filter: `projectId="${selectedProject.id}"`, sort: '-created', $autoCancel: false });
-        setRecentActivity(recentReqs.items.map(req => ({ id: req.id, type: 'request', title: `New Scaffold Request: ${req.location}`, date: req.created, status: req.status })));
+        // Fetch recent activity (combining requests and diary entries for demo)
+        const recentReqs = await pb.collection('scaffold_requests').getList(1, 3, { 
+          filter: `projectId="${selectedProject.id}"`, 
+          sort: '-created',
+          $autoCancel: false 
+        });
+        
+        const activities = recentReqs.items.map(req => ({
+          id: req.id,
+          type: 'request',
+          title: `New Scaffold Request: ${req.location}`,
+          date: req.created,
+          status: req.status
+        }));
 
+        setRecentActivity(activities);
+
+        // Risk Score — real data
         const now = new Date();
         const cutoff48h = new Date(now - 48 * 60 * 60 * 1000).toISOString().replace('T', ' ');
-        const last7Days = Array.from({ length: 7 }, (_, i) => { const d = new Date(now); d.setDate(d.getDate() - i); return d.toISOString().split('T')[0]; });
-        const weekdays = last7Days.filter(d => { const day = new Date(d).getDay(); return day !== 0 && day !== 6; });
+
+        const last7Days = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(now);
+          d.setDate(d.getDate() - i);
+          return d.toISOString().split('T')[0];
+        });
+        const weekdays = last7Days.filter(d => {
+          const day = new Date(d).getDay();
+          return day !== 0 && day !== 6;
+        });
 
         const [pendingReqs, recentDiary] = await Promise.all([
-          pb.collection('scaffold_requests').getFullList({ filter: `projectId="${selectedProject.id}" && status="Pending" && created<"${cutoff48h}"`, $autoCancel: false }),
-          pb.collection('diary_entries').getFullList({ filter: `project_id="${selectedProject.id}" && date>="${weekdays[weekdays.length - 1]}"`, fields: 'date', $autoCancel: false })
+          pb.collection('scaffold_requests').getFullList({
+            filter: `projectId="${selectedProject.id}" && status="Pending" && created<"${cutoff48h}"`,
+            $autoCancel: false
+          }),
+          pb.collection('diary_entries').getFullList({
+            filter: `project_id="${selectedProject.id}" && date>="${weekdays[weekdays.length - 1]}"`,
+            fields: 'date',
+            $autoCancel: false
+          })
         ]);
 
         const diaryDates = new Set(recentDiary.map(e => e.date?.split(' ')[0]));
-        setRiskMetrics({ overdueInspections: 0, pendingRequestsOver48h: pendingReqs.length, missingDiaryEntries: weekdays.filter(d => !diaryDates.has(d)).length });
+        const missingDays = weekdays.filter(d => !diaryDates.has(d)).length;
+
+        setRiskMetrics({
+          overdueInspections: 0,
+          pendingRequestsOver48h: pendingReqs.length,
+          missingDiaryEntries: missingDays,
+        });
+
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
         setLoading(false);
       }
     };
+
     loadDashboardData();
   }, [selectedProject, fetchAlertCount]);
 
-  if (searchParams.get('session_id')) return <StripeSuccessPage />;
+  // If returning from Stripe checkout
+  if (searchParams.get('session_id')) {
+    return <StripeSuccessPage />;
+  }
 
   if (!selectedProject) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">
-        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4"><ClipboardList className="w-8 h-8 text-primary" /></div>
+        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
+          <ClipboardList className="w-8 h-8 text-primary" />
+        </div>
         <h1 className="text-3xl font-bold tracking-tight">Welcome to TrackMyScaffolding</h1>
-        <p className="text-muted-foreground max-w-md">Please select a project from the sidebar or create a new one to get started.</p>
+        <p className="text-muted-foreground max-w-md">
+          Please select a project from the sidebar or create a new one to get started.
+        </p>
         <Button onClick={() => navigate('/dashboard/settings/project')}>Create Project</Button>
       </div>
     );
@@ -148,72 +227,165 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-12">
-
       {/* Alert Banner */}
       {alertCount > 0 && showAlertBanner && (
         <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 flex items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-destructive/20 rounded-full text-destructive shrink-0"><BellRing className="w-5 h-5" /></div>
+            <div className="p-2 bg-destructive/20 rounded-full text-destructive shrink-0">
+              <BellRing className="w-5 h-5" />
+            </div>
             <div>
               <h3 className="font-semibold text-destructive-foreground">Attention Required</h3>
-              <p className="text-sm text-destructive-foreground/80">You have {alertCount} active alert{alertCount !== 1 ? 's' : ''} that need your attention.</p>
+              <p className="text-sm text-destructive-foreground/80">
+                You have {alertCount} active alert{alertCount !== 1 ? 's' : ''} that need your attention.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="sm" className="border-destructive/30 hover:bg-destructive/10" onClick={() => navigate('/dashboard/ai-assistant')}>View Alerts</Button>
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => setShowAlertBanner(false)}><X className="w-4 h-4" /></Button>
+            <Button variant="outline" size="sm" className="border-destructive/30 hover:bg-destructive/10" onClick={() => navigate('/dashboard/ai-assistant')}>
+              View Alerts
+            </Button>
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => setShowAlertBanner(false)}>
+              <X className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
           <p className="text-muted-foreground">Here's what's happening in {selectedProject.name} today.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate('/dashboard/site-diary/new')}><BookOpen className="w-4 h-4 mr-2" />Log Diary</Button>
-          <Button onClick={() => navigate('/dashboard/scaffold-requests/new')}><Plus className="w-4 h-4 mr-2" />New Request</Button>
+          <Button variant="outline" onClick={() => navigate('/dashboard/site-diary/new')}>
+            <BookOpen className="w-4 h-4 mr-2" />
+            Log Diary
+          </Button>
+          <Button onClick={() => navigate('/dashboard/scaffold-requests/new')}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Request
+          </Button>
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass-card"><div className="flex items-center gap-4"><div className="p-3 bg-primary/10 rounded-xl text-primary shadow-[0_0_15px_rgba(249,115,22,0.2)]"><ClipboardList className="w-6 h-6" /></div><div><p className="text-sm font-medium text-muted-foreground">Total Requests</p>{loading ? <Skeleton className="h-8 w-16 mt-1" /> : <h3 className="text-2xl font-bold tabular-nums text-white text-glow">{stats?.totalRequests || 0}</h3>}</div></div></div>
-        <div className="glass-card"><div className="flex items-center gap-4"><div className="p-3 bg-blue-500/10 rounded-xl text-blue-400 shadow-[0_0_15px_rgba(96,165,250,0.2)]"><BookOpen className="w-6 h-6" /></div><div><p className="text-sm font-medium text-muted-foreground">Diary Entries</p>{loading ? <Skeleton className="h-8 w-16 mt-1" /> : <h3 className="text-2xl font-bold tabular-nums text-white">{stats?.totalDiaryEntries || 0}</h3>}</div></div></div>
-        <div className="glass-card"><div className="flex items-center gap-4"><div className="p-3 bg-primary/10 rounded-xl text-primary shadow-[0_0_15px_rgba(249,115,22,0.2)]"><Truck className="w-6 h-6" /></div><div><p className="text-sm font-medium text-muted-foreground">Deliveries</p>{loading ? <Skeleton className="h-8 w-16 mt-1" /> : <h3 className="text-2xl font-bold tabular-nums text-white">{stats?.totalDeliveries || 0}</h3>}</div></div></div>
-        <div className="glass-card border-primary/30 bg-primary/5"><div className="flex items-center gap-4"><div className="p-3 bg-red-500/20 rounded-xl text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]"><AlertTriangle className="w-6 h-6" /></div><div><p className="text-sm font-medium text-muted-foreground">Active Alerts</p>{loading ? <Skeleton className="h-8 w-16 mt-1" /> : <h3 className="text-2xl font-bold tabular-nums text-red-500">{alertCount}</h3>}</div></div></div>
+        <div className="glass-card">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-primary/10 rounded-xl text-primary shadow-[0_0_15px_rgba(249,115,22,0.2)]">
+              <ClipboardList className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Requests</p>
+              {loading ? <Skeleton className="h-8 w-16 mt-1" /> : <h3 className="text-2xl font-bold tabular-nums text-white text-glow">{stats?.totalRequests || 0}</h3>}
+            </div>
+          </div>
+        </div>
+        <div className="glass-card">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400 shadow-[0_0_15px_rgba(96,165,250,0.2)]">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Diary Entries</p>
+              {loading ? <Skeleton className="h-8 w-16 mt-1" /> : <h3 className="text-2xl font-bold tabular-nums text-white">{stats?.totalDiaryEntries || 0}</h3>}
+            </div>
+          </div>
+        </div>
+        <div className="glass-card">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-primary/10 rounded-xl text-primary shadow-[0_0_15px_rgba(249,115,22,0.2)]">
+              <Truck className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Deliveries</p>
+              {loading ? <Skeleton className="h-8 w-16 mt-1" /> : <h3 className="text-2xl font-bold tabular-nums text-white">{stats?.totalDeliveries || 0}</h3>}
+            </div>
+          </div>
+        </div>
+        <div className="glass-card border-primary/30 bg-primary/5">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-red-500/20 rounded-xl text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Active Alerts</p>
+              {loading ? <Skeleton className="h-8 w-16 mt-1" /> : <h3 className="text-2xl font-bold tabular-nums text-red-500">{alertCount}</h3>}
+            </div>
+          </div>
+        </div>
         <WorkerHoursWidget projectId={selectedProject?.id} />
       </div>
 
-      {/* Risk Score Widget */}
+      {/* Project Risk Score Widget */}
       <Card className={`glass-card border ${riskStatus.border} ${riskStatus.bg} overflow-hidden relative`}>
-        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none"><RiskIcon className="w-32 h-32" /></div>
+        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+          <RiskIcon className="w-32 h-32" />
+        </div>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex-1 w-full space-y-4">
               <div className="flex items-center gap-2">
                 <RiskIcon className={`w-6 h-6 ${riskStatus.color}`} />
                 <h3 className="text-xl font-bold tracking-tight text-white">Project Risk Score</h3>
-                {riskTrend === 'up' && <span className="flex items-center gap-1 text-green-400 text-sm font-semibold" title={`Up from ${prevDayScore} yesterday`}><TrendingUp className="w-4 h-4" /> ↑</span>}
-                {riskTrend === 'down' && <span className="flex items-center gap-1 text-red-400 text-sm font-semibold" title={`Down from ${prevDayScore} yesterday`}><TrendingDown className="w-4 h-4" /> ↓</span>}
-                {riskTrend === 'stable' && <span className="flex items-center gap-1 text-muted-foreground text-sm font-semibold" title="No change since yesterday">→ stable</span>}
-                <Badge variant="outline" className={`ml-2 ${riskStatus.color} ${riskStatus.border}`}>{riskStatus.label}</Badge>
-                <button onClick={() => setShowWhyModal(true)} className="ml-1 text-muted-foreground hover:text-white transition-colors" title="Why is my score this value?"><HelpCircle className="w-4 h-4" /></button>
+                {/* Trend Indicator vs previous day */}
+                {riskTrend === 'up' && (
+                  <span className="flex items-center gap-1 text-green-400 text-sm font-semibold" title={`Up from ${prevDayScore} yesterday`}>
+                    <TrendingUp className="w-4 h-4" /> ↑
+                  </span>
+                )}
+                {riskTrend === 'down' && (
+                  <span className="flex items-center gap-1 text-red-400 text-sm font-semibold" title={`Down from ${prevDayScore} yesterday`}>
+                    <TrendingDown className="w-4 h-4" /> ↓
+                  </span>
+                )}
+                {riskTrend === 'stable' && (
+                  <span className="flex items-center gap-1 text-muted-foreground text-sm font-semibold" title="No change since yesterday">
+                    → stable
+                  </span>
+                )}
+                <Badge variant="outline" className={`ml-2 ${riskStatus.color} ${riskStatus.border}`}>
+                  {riskStatus.label}
+                </Badge>
+                {/* Why? button — text label added for discoverability (non-tech users) */}
+                <button
+                  onClick={() => setShowWhyModal(true)}
+                  className="ml-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-white transition-colors border border-white/10 hover:border-white/30 rounded-md px-2 py-1"
+                  title="How is this score calculated?"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  How is this calculated?
+                </button>
               </div>
+              
               <div className="space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Overall Safety & Compliance</span><span className={`font-bold ${riskStatus.color}`}>{riskScore} / 100</span></div>
-                <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden border border-white/5"><div className={`h-full ${riskStatus.bar} transition-all duration-1000 ease-out`} style={{ width: `${riskScore}%` }} /></div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Overall Safety & Compliance</span>
+                  <span className={`font-bold ${riskStatus.color}`}>{riskScore} / 100</span>
+                </div>
+                <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+                  <div 
+                    className={`h-full ${riskStatus.bar} transition-all duration-1000 ease-out`} 
+                    style={{ width: `${riskScore}%` }}
+                  />
+                </div>
               </div>
             </div>
+            
             <div className="flex flex-wrap md:flex-nowrap gap-3 w-full md:w-auto shrink-0 z-10">
-              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center flex-1 md:flex-none min-w-[100px]"><p className="text-2xl font-bold text-white">{riskMetrics.overdueInspections}</p><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Overdue  
-Inspections</p></div>
-              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center flex-1 md:flex-none min-w-[100px]"><p className="text-2xl font-bold text-white">{riskMetrics.pendingRequestsOver48h}</p><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Pending Req  
-(&gt;48h)</p></div>
-              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center flex-1 md:flex-none min-w-[100px]"><p className="text-2xl font-bold text-white">{riskMetrics.missingDiaryEntries}</p><p className="text-[10px] text-muted-foreground uppercase tracking-wider">Missing  
-Diaries</p></div>
+              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center flex-1 md:flex-none min-w-[100px]">
+                <p className="text-2xl font-bold text-white">{riskMetrics.overdueInspections}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Overdue<br/>Inspections</p>
+              </div>
+              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center flex-1 md:flex-none min-w-[100px]">
+                <p className="text-2xl font-bold text-white">{riskMetrics.pendingRequestsOver48h}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Pending Req<br/>(&gt;48h)</p>
+              </div>
+              <div className="bg-black/40 border border-white/10 rounded-lg p-3 text-center flex-1 md:flex-none min-w-[100px]">
+                <p className="text-2xl font-bold text-white">{riskMetrics.missingDiaryEntries}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Missing<br/>Diaries</p>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -223,32 +395,62 @@ Diaries</p></div>
       <Dialog open={showWhyModal} onOpenChange={setShowWhyModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><HelpCircle className="w-5 h-5 text-primary" />Why is my Risk Score {riskScore}?</DialogTitle>
-            <DialogDescription>Your score starts at <strong>100</strong> and is reduced by the following active penalties:</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-primary" />
+              Why is my Risk Score {riskScore}?
+            </DialogTitle>
+            <DialogDescription>
+              Your score starts at <strong>100</strong> and is reduced by the following active penalties:
+            </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-3 my-2">
             <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
-              <div><p className="text-sm font-medium">Pending Requests (&gt;48h)</p><p className="text-xs text-muted-foreground">−10 pts each · {riskMetrics.pendingRequestsOver48h} active</p></div>
-              <span className={`text-lg font-bold ${riskMetrics.pendingRequestsOver48h > 0 ? 'text-yellow-400' : 'text-green-400'}`}>{riskMetrics.pendingRequestsOver48h > 0 ? `−${riskMetrics.pendingRequestsOver48h * 10}` : '0'}</span>
+              <div>
+                <p className="text-sm font-medium">Pending Requests (&gt;48h)</p>
+                <p className="text-xs text-muted-foreground">−10 pts each &nbsp;·&nbsp; {riskMetrics.pendingRequestsOver48h} active</p>
+              </div>
+              <span className={`text-lg font-bold ${riskMetrics.pendingRequestsOver48h > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                {riskMetrics.pendingRequestsOver48h > 0 ? `−${riskMetrics.pendingRequestsOver48h * 10}` : '0'}
+              </span>
             </div>
             <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
-              <div><p className="text-sm font-medium">Missing Diary Entries</p><p className="text-xs text-muted-foreground">−5 pts each · last 7 weekdays</p></div>
-              <span className={`text-lg font-bold ${riskMetrics.missingDiaryEntries > 0 ? 'text-yellow-400' : 'text-green-400'}`}>{riskMetrics.missingDiaryEntries > 0 ? `−${riskMetrics.missingDiaryEntries * 5}` : '0'}</span>
+              <div>
+                <p className="text-sm font-medium">Missing Diary Entries</p>
+                <p className="text-xs text-muted-foreground">−5 pts each &nbsp;·&nbsp; last 7 weekdays</p>
+              </div>
+              <span className={`text-lg font-bold ${riskMetrics.missingDiaryEntries > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                {riskMetrics.missingDiaryEntries > 0 ? `−${riskMetrics.missingDiaryEntries * 5}` : '0'}
+              </span>
             </div>
             <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3">
-              <div><p className="text-sm font-medium">Active Alerts</p><p className="text-xs text-muted-foreground">−8 pts each · {alertCount} active</p></div>
-              <span className={`text-lg font-bold ${alertCount > 0 ? 'text-red-400' : 'text-green-400'}`}>{alertCount > 0 ? `−${alertCount * 8}` : '0'}</span>
+              <div>
+                <p className="text-sm font-medium">Active Alerts</p>
+                <p className="text-xs text-muted-foreground">−8 pts each &nbsp;·&nbsp; {alertCount} active</p>
+              </div>
+              <span className={`text-lg font-bold ${alertCount > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                {alertCount > 0 ? `−${alertCount * 8}` : '0'}
+              </span>
             </div>
+
             <div className="pt-3 border-t border-white/10 flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Final Score</span>
               <span className={`text-2xl font-bold ${riskStatus.color}`}>{riskScore} / 100</span>
             </div>
           </div>
+
+          {/* AI Recommendation */}
           <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex gap-3">
             <TrendingUp className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-            <div><p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">AI Recommendation</p><p className="text-sm text-muted-foreground">{getAiRecommendation()}</p></div>
+            <div>
+              <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">AI Recommendation</p>
+              <p className="text-sm text-muted-foreground">{getAiRecommendation()}</p>
+            </div>
           </div>
-          <DialogFooter><Button onClick={() => setShowWhyModal(false)} className="w-full">Got it</Button></DialogFooter>
+
+          <DialogFooter>
+            <Button onClick={() => setShowWhyModal(false)} className="w-full">Got it</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
