@@ -32,7 +32,7 @@ const ScaffoldRequestForm = () => {
   const isEditMode = !!id;
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
   const { createRequest, updateRequest, fetchRequestById, loading } = useScaffoldRequests();
   const { toast } = useToast();
 

@@ -27,7 +27,7 @@ import InviteSubcontractorModal from '@/components/InviteSubcontractorModal.jsx'
 
 const SubcontractorListPage = () => {
   const navigate = useNavigate();
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
   const { listSubcontractors, loading } = useSubcontractors();
   
   const [subcontractors, setSubcontractors] = useState([]);

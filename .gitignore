@@ -4,7 +4,17 @@ dist/
 .env.local
 .env.production
 *.zip
+*.tar.gz
+*.pdf
+*.PDF
 pocketbase_*
 apps/pocketbase/pb_data/
 apps/web/node_modules/
 apps/api/node_modules/
+.DS_Store
+*.bak
+horizons-export*/
+REPORT-*.html
+DreamSoft_logo*
+.nvmrc
+.version

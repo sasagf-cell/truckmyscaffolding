@@ -26,7 +26,7 @@ const SiteDiaryEntryForm = () => {
   const isEditMode = !!id;
   
   const navigate = useNavigate();
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
   const { createEntry, updateEntry, fetchEntryById, checkEntryExists, loading } = useSiteDiary();
   const { toast } = useToast();
 

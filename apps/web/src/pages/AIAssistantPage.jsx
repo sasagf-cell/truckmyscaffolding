@@ -7,7 +7,7 @@ import AIChat from '@/components/AIChat.jsx';
 import { Button } from '@/components/ui/button';
 
 const AIAssistantPage = () => {
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
   const [mobileView, setMobileView] = useState('chat'); // 'chat' or 'alerts'
 
   if (!selectedProject) {

@@ -38,7 +38,7 @@ import WorkerHoursWidget from '@/components/WorkerHoursWidget.jsx';
 const DashboardPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
   const { fetchAlertCount } = useAlerts(selectedProject?.id);
   
   const [stats, setStats] = useState(null);

@@ -12,7 +12,7 @@ import { Loader2, QrCode } from 'lucide-react';
 import QRGeneratorModal from '@/components/QRGeneratorModal.jsx';
 
 const ProjectSettingsTab = () => {
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
   const { getProjectSettings, updateProjectSettings, loading } = useSettings();
   const [qrModalOpen, setQrModalOpen] = useState(false);
 

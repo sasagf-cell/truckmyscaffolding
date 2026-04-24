@@ -49,7 +49,7 @@ const STATUS_OPTIONS = [
 ];
 
 const ScaffoldRequestsList = () => {
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
   const navigate = useNavigate();
   const { fetchRequests, loading } = useScaffoldRequests();
   

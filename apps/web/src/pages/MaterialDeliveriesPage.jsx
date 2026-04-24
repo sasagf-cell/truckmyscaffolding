@@ -9,7 +9,7 @@ import InventoryView from '@/components/InventoryView.jsx';
 
 const MaterialDeliveriesPage = () => {
   const navigate = useNavigate();
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
   const [activeTab, setActiveTab] = useState('deliveries');
 
   if (!selectedProject) {

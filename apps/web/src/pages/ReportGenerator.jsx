@@ -14,7 +14,7 @@ import MonthlyReportPreview from '@/components/MonthlyReportPreview.jsx';
 import ReportPreviewHeader from '@/components/ReportPreviewHeader.jsx';
 
 const ReportGenerator = () => {
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
   const { fetchDailyReport, fetchMonthlyReport, loading } = useReports();
   
   const [reportType, setReportType] = useState('daily');

@@ -45,7 +45,7 @@ const MaterialDeliveryForm = () => {
   const isEditMode = !!id;
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
   const { createDelivery, createMaterialItems, fetchDeliveryById, fetchMaterialItems, updateDelivery, loading } = useMaterialDeliveries();
   const { toast } = useToast();
 

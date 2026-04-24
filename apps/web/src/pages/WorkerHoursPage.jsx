@@ -19,7 +19,7 @@ const ROLES = ['Scaffolder', 'Foreman', 'Safety Officer', 'Rigger', 'Labourer'];
 
 const WorkerHoursPage = () => {
   const { currentUser } = useAuth();
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
 
   const [workers, setWorkers] = useState([]);
   const [hoursLog, setHoursLog] = useState([]);

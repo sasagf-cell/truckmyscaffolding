@@ -10,7 +10,7 @@ import SiteDiaryList from '@/components/SiteDiaryList.jsx';
 
 const SiteDiaryPage = () => {
   const navigate = useNavigate();
-  const { selectedProject } = useOutletContext();
+  const { selectedProject } = useOutletContext() ?? {};
   
   // Initialize view from localStorage or default to 'calendar'
   const [view, setView] = useState(() => {
