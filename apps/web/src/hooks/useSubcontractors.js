@@ -61,9 +61,33 @@ export const useSubcontractors = () => {
     }
   }, [toast]);
 
-  return { 
-    loading, 
-    fetchSubcontractors, 
-    inviteSubcontractor 
+  const listSubcontractors = useCallback(async (projectId, page = 1, pageSize = 20, filters = {}) => {
+    setLoading(true);
+    try {
+      const filterParts = [`projectId="${projectId}"`];
+      if (filters.status) filterParts.push(`status="${filters.status}"`);
+      if (filters.role) filterParts.push(`role="${filters.role}"`);
+      if (filters.search) filterParts.push(`userId.full_name~"${filters.search}"`);
+
+      return await pb.collection('subcontractors').getList(page, pageSize, {
+        filter: filterParts.join(' && '),
+        expand: 'userId',
+        sort: '-created',
+        $autoCancel: false
+      });
+    } catch (err) {
+      console.error('Error listing subcontractors:', err);
+      toast({ title: 'Error', description: 'Failed to load team members.', variant: 'destructive' });
+      return { items: [], totalItems: 0, totalPages: 0 };
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  return {
+    loading,
+    fetchSubcontractors,
+    listSubcontractors,
+    inviteSubcontractor
   };
 };

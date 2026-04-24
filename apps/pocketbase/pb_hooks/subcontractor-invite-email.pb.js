@@ -1,0 +1,80 @@
+/// <reference path="../pb_data/types.d.ts" />
+onRecordAfterCreateSuccess((e) => {
+  // Only send email if status is 'pending_invite'
+  if (e.record.get("status") !== "pending_invite") {
+    e.next();
+    return;
+  }
+
+  const projectId = e.record.get("projectId");
+  const email = e.record.get("email");
+  const role = e.record.get("role");
+  const inviteToken = e.record.get("inviteToken");
+  const createdBy = e.record.get("createdBy");
+  const permissions = e.record.get("permissions");
+
+  // Fetch project details
+  let projectName = "Project";
+  try {
+    const project = $app.findRecordById("projects", projectId);
+    if (project) {
+      projectName = project.get("name") || "Project";
+    }
+  } catch (err) {
+    console.log("Could not fetch project: " + err.message);
+  }
+
+  // Fetch coordinator details
+  let coordinatorName = "Coordinator";
+  try {
+    const coordinator = $app.findRecordById("users", createdBy);
+    if (coordinator) {
+      coordinatorName = coordinator.get("full_name") || coordinator.get("name") || "Coordinator";
+    }
+  } catch (err) {
+    console.log("Could not fetch coordinator: " + err.message);
+  }
+
+  // Build permissions list HTML
+  let permissionsHtml = "<ul>";
+  if (Array.isArray(permissions)) {
+    permissions.forEach((perm) => {
+      const permName = perm.name || "Unknown";
+      const canRead = perm.canRead ? "✓" : "✗";
+      const canWrite = perm.canWrite ? "✓" : "✗";
+      permissionsHtml += "<li>" + permName + " (Read: " + canRead + ", Write: " + canWrite + ")</li>";
+    });
+  }
+  permissionsHtml += "</ul>";
+
+  // Build invite link (frontend should handle token validation)
+  const inviteLink = inviteToken ? "https://trackmyscaffolding.com/join?token=" + inviteToken : "https://trackmyscaffolding.com/join";
+
+  // Build email HTML
+  const emailHtml = "<h2>You're invited to join " + projectName + " as " + role + "</h2>" +
+    "<p>Hello,</p>" +
+    "<p>" + coordinatorName + " has invited you to join the " + projectName + " project.</p>" +
+    "<h3>Your Role: " + role + "</h3>" +
+    "<h3>Permissions:</h3>" +
+    permissionsHtml +
+    "<p><a href=\"" + inviteLink + "\" style=\"background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;\">Accept Invitation</a></p>" +
+    "<p>If you have any questions, please contact " + coordinatorName + ".</p>";
+
+  const message = new MailerMessage({
+    from: {
+      address: $app.settings().meta.senderAddress,
+      name: $app.settings().meta.senderName
+    },
+    to: [{ address: email }],
+    subject: "[" + projectName + "] You're invited to join as " + role,
+    html: emailHtml
+  });
+
+  try {
+    $app.newMailClient().send(message);
+  } catch (err) {
+    console.log("Failed to send invite email: " + err.message);
+  }
+
+  e.next();
+}, "subcontractors");

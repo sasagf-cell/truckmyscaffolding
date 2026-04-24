@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import apiServerClient from '@/lib/apiServerClient.js';
+import pb from '@/lib/pocketbaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,10 +69,16 @@ const SubcontractorSignupPage = () => {
         throw new Error(errData.error || 'Failed to join project');
       }
 
-      setSuccess(true);
-      setTimeout(() => {
-        navigate('/login');
-      }, 3000);
+      // Auto-login after successful join
+      try {
+        await pb.collection('users').authWithPassword(inviteData.email, data.password);
+        setSuccess(true);
+        setTimeout(() => navigate('/dashboard'), 1500);
+      } catch {
+        // Login failed — fallback to manual login
+        setSuccess(true);
+        setTimeout(() => navigate('/login'), 2000);
+      }
     } catch (err) {
       setError(err.message);
     } finally {

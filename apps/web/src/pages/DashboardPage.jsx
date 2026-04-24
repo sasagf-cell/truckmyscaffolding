@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAlerts } from '@/hooks/useAlerts.js';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import pb from '@/lib/pocketbaseClient';
 import Scaffold3DPreview from '@/components/Scaffold3DPreview.jsx';
 import ScaffoldQRCode from '@/components/ScaffoldQRCode.jsx';
@@ -39,6 +40,7 @@ const DashboardPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { selectedProject } = useOutletContext() ?? {};
+  const { currentUser } = useAuth();
   const { fetchAlertCount } = useAlerts(selectedProject?.id);
   
   const [stats, setStats] = useState(null);
@@ -211,16 +213,25 @@ const DashboardPage = () => {
   }
 
   if (!selectedProject) {
+    const isSubcontractor = currentUser?.role === 'Subcontractor';
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">
         <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
           <ClipboardList className="w-8 h-8 text-primary" />
         </div>
         <h1 className="text-3xl font-bold tracking-tight">Welcome to TrackMyScaffolding</h1>
-        <p className="text-muted-foreground max-w-md">
-          Please select a project from the sidebar or create a new one to get started.
-        </p>
-        <Button onClick={() => navigate('/onboarding')}>Create Project</Button>
+        {isSubcontractor ? (
+          <p className="text-muted-foreground max-w-md">
+            You haven't been added to a project yet. Ask your coordinator to send you an invite link or QR code to join a project.
+          </p>
+        ) : (
+          <>
+            <p className="text-muted-foreground max-w-md">
+              Please select a project from the sidebar or create a new one to get started.
+            </p>
+            <Button onClick={() => navigate('/onboarding')}>Create Project</Button>
+          </>
+        )}
       </div>
     );
   }
