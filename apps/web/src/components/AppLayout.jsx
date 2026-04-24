@@ -261,7 +261,7 @@ const AppLayout = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{currentUser?.full_name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{currentUser?.role || 'User'}</p>
+                <p className="text-xs text-muted-foreground capitalize">{currentUser?.role === 'Subcontractor' ? 'Site Team' : currentUser?.role || 'User'}</p>
               </div>
             </div>
             <button

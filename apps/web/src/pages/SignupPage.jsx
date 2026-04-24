@@ -183,7 +183,7 @@ const SignupPage = () => {
                   className="input-field text-foreground"
                 >
                   <option value="Coordinator">Coordinator</option>
-                  <option value="Subcontractor">Subcontractor</option>
+                  <option value="Subcontractor">Site Team</option>
                 </select>
               </div>
 

@@ -143,8 +143,8 @@ const InviteSubcontractorModal = ({ isOpen, onClose, projectId, onSuccess }) => 
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Worker">Worker</SelectItem>
-                    <SelectItem value="Supervisor">Supervisor</SelectItem>
+                    <SelectItem value="Worker">Site Team — Worker</SelectItem>
+                    <SelectItem value="Supervisor">Site Team — Supervisor</SelectItem>
                     <SelectItem value="Coordinator">Coordinator</SelectItem>
                   </SelectContent>
                 </Select>
