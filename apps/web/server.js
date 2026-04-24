@@ -4,14 +4,32 @@ import { join, extname } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err.message, err.stack);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+});
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST = join(__dirname, 'dist');
 const PORT = process.env.PORT || 3000;
 
-console.log(`DIST path: ${DIST}`);
+console.log(`=== SERVER STARTUP ===`);
+console.log(`NODE_VERSION: ${process.version}`);
+console.log(`PORT: ${PORT}`);
+console.log(`__dirname: ${__dirname}`);
+console.log(`DIST: ${DIST}`);
 console.log(`DIST exists: ${existsSync(DIST)}`);
-if (existsSync(DIST)) {
-  console.log(`DIST contents: ${readdirSync(DIST).join(', ')}`);
+try {
+  if (existsSync(DIST)) {
+    console.log(`DIST contents: ${readdirSync(DIST).slice(0, 5).join(', ')}`);
+    const idx = join(DIST, 'index.html');
+    console.log(`index.html exists: ${existsSync(idx)}`);
+  }
+} catch (e) {
+  console.error('Startup check error:', e.message);
 }
 
 const MIME = {
@@ -39,7 +57,7 @@ createServer((req, res) => {
 
     if (!existsSync(filePath)) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end(`404: ${filePath} not found. DIST=${DIST} exists=${existsSync(DIST)}`);
+      res.end(`404: dist/index.html not found. DIST=${DIST}`);
       return;
     }
 
