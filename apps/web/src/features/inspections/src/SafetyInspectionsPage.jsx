@@ -1,15 +1,13 @@
 import React from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useInspections } from './hooks/useInspections';
 import InspectionForm from './components/InspectionForm';
 import InspectionHistory from './components/InspectionHistory';
 import SafetyTag from './components/SafetyTag';
 
-/**
- * Glavna stranica za upravljanje bezbednošću skela.
- * @param {Object} props
- * @param {string} props.scaffoldId - ID skele (dinamički prosleđen)
- */
-const SafetyInspectionsPage = ({ scaffoldId = 'DEMO-SCAFFOLD-123' }) => {
+const SafetyInspectionsPage = () => {
+  const { selectedProject } = useOutletContext() ?? {};
+  const scaffoldId = selectedProject?.id ?? null;
   const { 
     inspections, 
     latest, 
@@ -26,6 +24,14 @@ const SafetyInspectionsPage = ({ scaffoldId = 'DEMO-SCAFFOLD-123' }) => {
       console.error('Greška pri čuvanju:', err);
     }
   };
+
+  if (!selectedProject) {
+    return (
+      <div className="flex items-center justify-center h-48 text-muted-foreground">
+        Please select a project from the sidebar to view safety inspections.
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
