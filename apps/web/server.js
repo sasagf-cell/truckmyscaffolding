@@ -70,4 +70,4 @@ createServer((req, res) => {
     res.writeHead(500, { 'Content-Type': 'text/plain' });
     res.end(`500: ${err.message}`);
   }
-}).listen(PORT, () => console.log(`Static server on port ${PORT}`));
+}).listen(PORT, '0.0.0.0', () => console.log(`Static server on port ${PORT}`));
