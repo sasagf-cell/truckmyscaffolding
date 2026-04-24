@@ -220,7 +220,7 @@ const DashboardPage = () => {
         <p className="text-muted-foreground max-w-md">
           Please select a project from the sidebar or create a new one to get started.
         </p>
-        <Button onClick={() => navigate('/dashboard/settings/project')}>Create Project</Button>
+        <Button onClick={() => navigate('/onboarding')}>Create Project</Button>
       </div>
     );
   }

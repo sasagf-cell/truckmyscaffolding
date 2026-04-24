@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
 import { User, Briefcase, Bell, CreditCard, Shield, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +38,7 @@ const navItems = [
 ];
 
 const SettingsLayout = () => {
+  const outletContext = useOutletContext();
   return (
     <div className="flex flex-col md:flex-row gap-8">
       <aside className="w-full md:w-64 shrink-0">
@@ -62,7 +63,7 @@ const SettingsLayout = () => {
         </nav>
       </aside>
       <main className="flex-1 min-w-0">
-        <Outlet />
+        <Outlet context={outletContext} />
       </main>
     </div>
   );
