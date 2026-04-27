@@ -11,7 +11,6 @@ onRecordAfterCreateSuccess((e) => {
   const role = e.record.get("role");
   const inviteToken = e.record.get("inviteToken");
   const createdBy = e.record.get("createdBy");
-  const permissions = e.record.get("permissions");
 
   // Fetch project details
   let projectName = "Project";
@@ -35,30 +34,25 @@ onRecordAfterCreateSuccess((e) => {
     console.log("Could not fetch coordinator: " + err.message);
   }
 
-  // Build permissions list HTML
-  let permissionsHtml = "<ul>";
-  if (Array.isArray(permissions)) {
-    permissions.forEach((perm) => {
-      const permName = perm.name || "Unknown";
-      const canRead = perm.canRead ? "✓" : "✗";
-      const canWrite = perm.canWrite ? "✓" : "✗";
-      permissionsHtml += "<li>" + permName + " (Read: " + canRead + ", Write: " + canWrite + ")</li>";
-    });
-  }
-  permissionsHtml += "</ul>";
-
-  // Build invite link (frontend should handle token validation)
-  const inviteLink = inviteToken ? "https://trackmyscaffolding.com/join?token=" + inviteToken : "https://trackmyscaffolding.com/join";
+  // Build invite link
+  const baseUrl = "https://trackmyscaffolding.com";
+  const inviteLink = inviteToken
+    ? baseUrl + "/join?token=" + inviteToken
+    : baseUrl + "/join";
 
   // Build email HTML
-  const emailHtml = "<h2>You're invited to join " + projectName + " as " + role + "</h2>" +
+  const emailHtml =
+    "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>" +
+    "<h2 style='color: #1E3A5F;'>You're invited to join " + projectName + "</h2>" +
     "<p>Hello,</p>" +
-    "<p>" + coordinatorName + " has invited you to join the " + projectName + " project.</p>" +
-    "<h3>Your Role: " + role + "</h3>" +
-    "<h3>Permissions:</h3>" +
-    permissionsHtml +
-    "<p><a href=\"" + inviteLink + "\" style=\"background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;\">Accept Invitation</a></p>" +
-    "<p>If you have any questions, please contact " + coordinatorName + ".</p>";
+    "<p><strong>" + coordinatorName + "</strong> has invited you to join the project <strong>" + projectName + "</strong> on TrackMyScaffolding.</p>" +
+    "<p><strong>Your Role:</strong> " + role + "</p>" +
+    "<p style='margin: 30px 0;'>" +
+    "<a href='" + inviteLink + "' style='background-color: #1E3A5F; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;'>Accept Invitation</a>" +
+    "</p>" +
+    "<p style='color: #666; font-size: 14px;'>Or copy this link: " + inviteLink + "</p>" +
+    "<p style='color: #666; font-size: 12px; margin-top: 30px;'>If you have any questions, contact " + coordinatorName + ".</p>" +
+    "</div>";
 
   const message = new MailerMessage({
     from: {
@@ -66,12 +60,13 @@ onRecordAfterCreateSuccess((e) => {
       name: $app.settings().meta.senderName
     },
     to: [{ address: email }],
-    subject: "[" + projectName + "] You're invited to join as " + role,
+    subject: "You're invited to join " + projectName + " on TrackMyScaffolding",
     html: emailHtml
   });
 
   try {
     $app.newMailClient().send(message);
+    console.log("Invite email sent to: " + email);
   } catch (err) {
     console.log("Failed to send invite email: " + err.message);
   }
