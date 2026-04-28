@@ -32,6 +32,10 @@ const OnboardingFlow = () => {
   };
 
   const handleSubcontractorSubmit = async () => {
+    if (!currentUser?.id) {
+      toast.error('Session expired. Please refresh the page.');
+      return;
+    }
     setLoading(true);
     try {
       const project = await pb.collection('projects').create({
@@ -39,29 +43,48 @@ const OnboardingFlow = () => {
         name: projectName,
         location: companyName,
         description: '',
-        scaffold_prefix: 'GER'
+        contract_type: 'stundenlohn',
+        inspection_interval_days: 28,
+        primary_scaffold_system: '',
+        allow_mixed_systems: false
       }, { $autoCancel: false });
 
       if (subcontractorEmail.trim()) {
-        await pb.collection('subcontractors').create({
-          project_id: project.id,
-          company_name: 'Subcontractor',
-          contact_person: '',
-          email: subcontractorEmail,
-          status: 'pending_invite',
-          invite_token: crypto.randomUUID()
-        }, { $autoCancel: false });
+        try {
+          const inviteToken = crypto.randomUUID();
+          await pb.collection('subcontractors').create({
+            projectId: project.id,
+            email: subcontractorEmail,
+            role: 'Worker',
+            status: 'pending_invite',
+            permissions: [],
+            inviteToken,
+            inviteTokenExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            createdBy: currentUser.id
+          }, { $autoCancel: false });
+        } catch (inviteError) {
+          console.error('Subcontractor invite failed (non-blocking):', inviteError);
+          // Don't block onboarding — user can invite subcontractors from Settings later
+        }
       }
 
       setStep(4);
     } catch (error) {
-      toast.error('Failed to create project');
+      console.error('Onboarding error:', error);
+      console.error('PB error status:', error.status);
+      console.error('PB error data:', JSON.stringify(error.response?.data, null, 2));
+      const pbDetail = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      toast.error(`Create failed (${error.status}): ${pbDetail}`);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSkip = async () => {
+    if (!currentUser?.id) {
+      toast.error('Session expired. Please refresh the page.');
+      return;
+    }
     setLoading(true);
     try {
       await pb.collection('projects').create({
@@ -69,12 +92,19 @@ const OnboardingFlow = () => {
         name: projectName,
         location: companyName,
         description: '',
-        scaffold_prefix: 'GER'
+        contract_type: 'stundenlohn',
+        inspection_interval_days: 28,
+        primary_scaffold_system: '',
+        allow_mixed_systems: false
       }, { $autoCancel: false });
 
       setStep(4);
     } catch (error) {
-      toast.error('Failed to create project');
+      console.error('Onboarding skip error:', error);
+      console.error('PB error status:', error.status);
+      console.error('PB error data:', JSON.stringify(error.response?.data, null, 2));
+      const pbDetail = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      toast.error(`Create failed (${error.status}): ${pbDetail}`);
     } finally {
       setLoading(false);
     }
@@ -114,7 +144,7 @@ const OnboardingFlow = () => {
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                     placeholder="e.g., Berlin Central Station Renovation"
-                    className="input-field text-foreground"
+                    className="input-field text-gray-900 bg-white w-full"
                     onKeyPress={(e) => e.key === 'Enter' && handleProjectSubmit()}
                   />
                   <button onClick={handleProjectSubmit} className="btn-primary w-full">
@@ -136,7 +166,7 @@ const OnboardingFlow = () => {
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="e.g., Meridian Construction GmbH"
-                    className="input-field text-foreground"
+                    className="input-field text-gray-900 bg-white w-full"
                     onKeyPress={(e) => e.key === 'Enter' && handleCompanySubmit()}
                   />
                   <button onClick={handleCompanySubmit} className="btn-primary w-full">
@@ -152,15 +182,15 @@ const OnboardingFlow = () => {
                     <p className="text-muted-foreground">Company: {companyName}</p>
                   </div>
                   <div className="bg-primary/10 rounded-lg p-4">
-                    <p className="text-primary font-medium">Add your first subcontractor</p>
+                    <p className="text-primary font-medium">Invite your first Site Team</p>
                     <p className="text-sm text-primary/80 mt-1">We'll send them an invite email</p>
                   </div>
                   <input
                     type="email"
                     value={subcontractorEmail}
                     onChange={(e) => setSubcontractorEmail(e.target.value)}
-                    placeholder="subcontractor@company.com"
-                    className="input-field text-foreground"
+                    placeholder="siteteam@company.com"
+                    className="input-field text-gray-900 bg-white w-full"
                   />
                   <div className="flex gap-3">
                     <button
