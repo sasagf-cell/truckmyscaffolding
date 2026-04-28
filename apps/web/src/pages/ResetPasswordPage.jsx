@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 
@@ -11,6 +12,8 @@ const ResetPasswordPage = () => {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const { confirmPasswordReset } = useAuth();
   const navigate = useNavigate();
 
@@ -83,15 +86,25 @@ const ResetPasswordPage = () => {
                 <label htmlFor="password" className="block text-sm font-medium mb-2">
                   New Password
                 </label>
-                <input
-                  type="password"
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="input-field text-foreground"
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="input-field text-gray-900 bg-white pr-10 w-full"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   Must be at least 8 characters and include an uppercase letter, a number, and a special character.
                 </p>
@@ -101,15 +114,25 @@ const ResetPasswordPage = () => {
                 <label htmlFor="passwordConfirm" className="block text-sm font-medium mb-2">
                   Confirm New Password
                 </label>
-                <input
-                  type="password"
-                  id="passwordConfirm"
-                  value={passwordConfirm}
-                  onChange={(e) => setPasswordConfirm(e.target.value)}
-                  required
-                  className="input-field text-foreground"
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    type={showPasswordConfirm ? 'text' : 'password'}
+                    id="passwordConfirm"
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    required
+                    className="input-field text-gray-900 bg-white pr-10 w-full"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    tabIndex={-1}
+                  >
+                    {showPasswordConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <button

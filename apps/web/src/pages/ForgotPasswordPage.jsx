@@ -62,7 +62,7 @@ const ForgotPasswordPage = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="input-field text-foreground"
+                    className="input-field text-gray-900 bg-white w-full"
                     placeholder="you@company.com"
                   />
                 </div>

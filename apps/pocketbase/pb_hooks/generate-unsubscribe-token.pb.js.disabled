@@ -1,0 +1,15 @@
+/// <reference path="../pb_data/types.d.ts" />
+onRecordCreate((e) => {
+  // Generate a random unsubscribe token on user creation
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  e.record.set('unsubscribeToken', token);
+  
+  // Initialize emailPreferences with default structure
+  e.record.set('emailPreferences', {
+    unsubscribed: false,
+    optedOutTypes: []
+  });
+  
+  e.next();
+}, 'users');

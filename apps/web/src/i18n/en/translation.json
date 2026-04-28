@@ -15,5 +15,37 @@
   "common": {
     "install_app": "Install App",
     "logout": "Log out"
+  },
+  "briefing": {
+    "greeting_morning": "Good morning, {{name}} 👋",
+    "greeting_afternoon": "Welcome back, {{name}} 👋",
+    "greeting_evening": "Good evening, {{name}} 👋",
+    "greeting_morning_anon": "Good morning 👋",
+    "greeting_afternoon_anon": "Welcome back 👋",
+    "all_clear_project": "All is well on project <strong>{{name}}</strong>.",
+    "all_clear_detail": "No overdue inspections, no scaffolds on red tag. Excellent status!",
+    "overdue_one": "{{count}} inspection is overdue — immediate action required.",
+    "overdue_other": "{{count}} inspections are overdue — immediate action required.",
+    "red_tag_one": "{{count}} scaffold is on red tag — do not use.",
+    "red_tag_other": "{{count}} scaffolds are on red tag — do not use.",
+    "upcoming_one": "{{count}} inspection due within 7 days (next in {{days}} day).",
+    "upcoming_other": "{{count}} inspections due within 7 days (next in {{days}} days).",
+    "action_schedule": "Schedule inspections",
+    "action_view_tags": "View scaffold tags"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "all_clear": "All clear",
+    "all_clear_desc": "No active alerts for this project",
+    "overdue_inspection": "Overdue Inspection",
+    "do_not_use": "Scaffold — Do Not Use",
+    "due_soon": "Inspection Due Soon",
+    "critical": "critical",
+    "upcoming": "upcoming",
+    "days_overdue_one": "{{count}} day overdue",
+    "days_overdue_other": "{{count}} days overdue",
+    "failed_last": "failed last inspection",
+    "in_days_one": "in {{count}} day",
+    "in_days_other": "in {{count}} days"
   }
 }

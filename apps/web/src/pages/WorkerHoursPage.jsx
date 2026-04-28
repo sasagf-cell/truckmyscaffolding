@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import pb from '@/lib/pocketbaseClient.js';
@@ -12,10 +12,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Clock, Users, Trash2, UserPlus } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus, Clock, Users, Trash2, UserPlus, CalendarDays } from 'lucide-react';
+import { format, startOfWeek, startOfMonth, parseISO } from 'date-fns';
 
 const ROLES = ['Scaffolder', 'Foreman', 'Safety Officer', 'Rigger', 'Labourer'];
+const PERIOD_OPTIONS = [
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
+  { value: 'all', label: 'All Time' },
+];
 
 const WorkerHoursPage = () => {
   const { currentUser } = useAuth();
@@ -26,6 +31,7 @@ const WorkerHoursPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isWorkerModalOpen, setIsWorkerModalOpen] = useState(false);
   const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
+  const [period, setPeriod] = useState('month');
 
   const [workerForm, setWorkerForm] = useState({ role: '', company: '' });
   const [hoursForm, setHoursForm] = useState({
@@ -42,12 +48,12 @@ const WorkerHoursPage = () => {
       setIsLoading(true);
       const [workersRes, hoursRes] = await Promise.all([
         pb.collection('project_workers').getFullList({
-          filter: `project_id = "${selectedProject.id}"`,
+          filter: pb.filter('project_id = {:pid}', { pid: selectedProject.id }),
           sort: 'anonymous_id',
           $autoCancel: false
         }),
         pb.collection('worker_hours').getFullList({
-          filter: `project_id = "${selectedProject.id}"`,
+          filter: pb.filter('project_id = {:pid}', { pid: selectedProject.id }),
           sort: '-date',
           expand: 'worker_id',
           $autoCancel: false
@@ -63,6 +69,26 @@ const WorkerHoursPage = () => {
   };
 
   useEffect(() => { fetchData(); }, [selectedProject?.id]);
+
+  // Filter hours log by selected period (client-side)
+  const filteredHours = useMemo(() => {
+    const now = new Date();
+    if (period === 'week') {
+      const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+      return hoursLog.filter(h => {
+        const d = parseISO(h.date.split('T')[0]);
+        return d >= weekStart;
+      });
+    }
+    if (period === 'month') {
+      const monthStart = startOfMonth(now);
+      return hoursLog.filter(h => {
+        const d = parseISO(h.date.split('T')[0]);
+        return d >= monthStart;
+      });
+    }
+    return hoursLog;
+  }, [hoursLog, period]);
 
   const generateAnonymousId = (existingWorkers) => {
     const count = existingWorkers.length + 1;
@@ -125,8 +151,8 @@ const WorkerHoursPage = () => {
     }
   };
 
-  const totalRegular = hoursLog.reduce((sum, h) => sum + (h.regular_hours || 0), 0);
-  const totalOvertime = hoursLog.reduce((sum, h) => sum + (h.overtime_hours || 0), 0);
+  const totalRegular = filteredHours.reduce((sum, h) => sum + (h.regular_hours || 0), 0);
+  const totalOvertime = filteredHours.reduce((sum, h) => sum + (h.overtime_hours || 0), 0);
 
   if (!selectedProject) {
     return (
@@ -146,12 +172,24 @@ const WorkerHoursPage = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Worker Hours</h1>
           <p className="text-sm text-muted-foreground">GDPR-compliant anonymous tracking — {selectedProject.name}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 bg-muted/30">
+            <CalendarDays className="w-4 h-4 text-muted-foreground" />
+            {PERIOD_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setPeriod(opt.value)}
+                className={`text-sm px-2 py-0.5 rounded transition-colors ${period === opt.value ? 'bg-primary text-primary-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <Button variant="outline" onClick={() => setIsWorkerModalOpen(true)}>
             <UserPlus className="w-4 h-4 mr-2" /> Add Worker
           </Button>
@@ -230,10 +268,15 @@ const WorkerHoursPage = () => {
 
       {/* Hours Log Table */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Hours Log</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Hours Log</CardTitle>
+          <span className="text-xs text-muted-foreground">{filteredHours.length} entr{filteredHours.length === 1 ? 'y' : 'ies'} · {PERIOD_OPTIONS.find(o => o.value === period)?.label}</span>
+        </CardHeader>
         <CardContent>
-          {hoursLog.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No hours logged yet.</div>
+          {filteredHours.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {hoursLog.length === 0 ? 'No hours logged yet.' : `No entries for ${PERIOD_OPTIONS.find(o => o.value === period)?.label.toLowerCase()}.`}
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -246,7 +289,7 @@ const WorkerHoursPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {hoursLog.map(h => (
+                {filteredHours.map(h => (
                   <TableRow key={h.id}>
                     <TableCell>{format(new Date(h.date), 'dd MMM yyyy')}</TableCell>
                     <TableCell><Badge variant="outline">{h.expand?.worker_id?.anonymous_id || '—'}</Badge></TableCell>
@@ -276,7 +319,7 @@ const WorkerHoursPage = () => {
             </div>
             <div>
               <Label>Company</Label>
-              <Input placeholder="Subcontractor company name" value={workerForm.company} onChange={e => setWorkerForm(f => ({ ...f, company: e.target.value }))} />
+              <Input placeholder="Company name" value={workerForm.company} onChange={e => setWorkerForm(f => ({ ...f, company: e.target.value }))} />
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsWorkerModalOpen(false)}>Cancel</Button>

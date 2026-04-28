@@ -88,7 +88,7 @@ const InviteSubcontractorModal = ({ isOpen, onClose, projectId, onSuccess }) => 
     if (!inviteUrl) return;
     setGeneratingQr(true);
     try {
-      const res = await apiServerClient.fetch(`/subcontractors/qr-code?url=${encodeURIComponent(inviteUrl)}`);
+      const res = await apiServerClient.fetch(`/site-team/qr-code?url=${encodeURIComponent(inviteUrl)}`);
       const data = await res.json();
       setQrCode(data.qrCode);
     } catch (err) {
@@ -117,7 +117,7 @@ const InviteSubcontractorModal = ({ isOpen, onClose, projectId, onSuccess }) => 
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Invite Team Member</DialogTitle>
+          <DialogTitle>Invite Team</DialogTitle>
           <DialogDescription>
             Send an invitation to join this project. They will receive an email with a secure link.
           </DialogDescription>

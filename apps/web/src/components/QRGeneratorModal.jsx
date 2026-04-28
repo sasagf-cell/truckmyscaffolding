@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Copy, Download, QrCode, Clock } from 'lucide-react';
+import pb from '@/lib/pocketbaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -20,7 +21,7 @@ const QRGeneratorModal = ({ open, onOpenChange, project }) => {
     try {
       const res = await fetch(`${API_URL}/api/projects/${project.id}/qr-token`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('pb_auth_token')}` }
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pb.authStore.token}` }
       });
       if (!res.ok) throw new Error('Failed to generate QR token');
       const { token, expires_at } = await res.json();

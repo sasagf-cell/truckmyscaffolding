@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import pb from '@/lib/pocketbaseClient.js';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,34 +8,34 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_BASE = '/hcgi/api';
 
 const JoinProjectPage = () => {
-  const { token } = useParams();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { login } = useAuth();
 
   const [status, setStatus] = useState('validating'); // validating | valid | invalid | expired | joined
-  const [projectName, setProjectName] = useState('');
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [inviteData, setInviteData] = useState(null);
+  const [form, setForm] = useState({ full_name: '', password: '' });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (!token) {
+      setStatus('invalid');
+      return;
+    }
     const validateToken = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/join/${token}`);
+        const res = await fetch(`${API_BASE}/site-team/validate-token/${token}`);
         const data = await res.json();
-        if (!res.ok || data.error) {
-          setStatus(data.expired ? 'expired' : 'invalid');
+        if (!res.ok || !data.valid) {
+          setStatus('invalid');
           return;
         }
-        setProjectName(data.project_name);
-        // If already logged in, join directly
-        if (currentUser) {
-          await joinExistingUser();
-        } else {
-          setStatus('valid');
-        }
+        setInviteData(data);
+        setStatus('valid');
       } catch {
         setStatus('invalid');
       }
@@ -44,22 +43,8 @@ const JoinProjectPage = () => {
     validateToken();
   }, [token]);
 
-  const joinExistingUser = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/join/${token}/accept`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('pb_auth_token')}` }
-      });
-      if (!res.ok) throw new Error();
-      setStatus('joined');
-      setTimeout(() => navigate('/dashboard'), 2000);
-    } catch {
-      toast.error('Failed to join project');
-    }
-  };
-
-  const handleSignupAndJoin = async () => {
-    if (!form.name || !form.email || !form.password) {
+  const handleJoin = async () => {
+    if (!form.full_name.trim() || !form.password) {
       toast.error('All fields are required');
       return;
     }
@@ -69,26 +54,29 @@ const JoinProjectPage = () => {
     }
     setSubmitting(true);
     try {
-      // Create account
-      await pb.collection('users').create({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        passwordConfirm: form.password,
-        role: 'Subcontractor'
-      });
-      // Login
-      await pb.collection('users').authWithPassword(form.email, form.password);
-      // Accept invite
-      const res = await fetch(`${API_URL}/api/join/${token}/accept`, {
+      const res = await fetch(`${API_BASE}/site-team/join`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pb.authStore.token}` }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          full_name: form.full_name.trim(),
+          password: form.password
+        })
       });
-      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to join project');
+      }
+      // Auto-login with the email from invite + supplied password
+      try {
+        await login(inviteData.email, form.password);
+      } catch {
+        // Login might fail if email differs — just redirect
+      }
       setStatus('joined');
-      setTimeout(() => navigate('/dashboard'), 2000);
+      setTimeout(() => navigate('/dashboard'), 2500);
     } catch (err) {
-      toast.error(err.message?.includes('email') ? 'Email already in use' : 'Failed to create account');
+      toast.error(err.message || 'Failed to join project. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -108,10 +96,12 @@ const JoinProjectPage = () => {
         <Card className="max-w-sm w-full">
           <CardContent className="pt-6 text-center space-y-3">
             <AlertTriangle className="w-12 h-12 text-destructive mx-auto" />
-            <h2 className="text-lg font-semibold">{status === 'expired' ? 'Link Expired' : 'Invalid Link'}</h2>
+            <h2 className="text-lg font-semibold">
+              {status === 'expired' ? 'Link Expired' : 'Invalid Link'}
+            </h2>
             <p className="text-sm text-muted-foreground">
               {status === 'expired'
-                ? 'This QR code has expired. Ask your coordinator to generate a new one.'
+                ? 'This invite link has expired. Ask your coordinator to send a new one.'
                 : 'This invite link is invalid or has already been used.'}
             </p>
             <Button variant="outline" asChild><Link to="/">Go Home</Link></Button>
@@ -127,7 +117,9 @@ const JoinProjectPage = () => {
         <Card className="max-w-sm w-full">
           <CardContent className="pt-6 text-center space-y-3">
             <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
-            <h2 className="text-lg font-semibold">You've joined {projectName}!</h2>
+            <h2 className="text-lg font-semibold">
+              You've joined {inviteData?.project?.name || 'the project'}!
+            </h2>
             <p className="text-sm text-muted-foreground">Redirecting to your dashboard...</p>
           </CardContent>
         </Card>
@@ -139,27 +131,48 @@ const JoinProjectPage = () => {
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="max-w-sm w-full">
         <CardHeader>
-          <CardTitle>Join {projectName}</CardTitle>
-          <p className="text-sm text-muted-foreground">Create your account to access this project on TrackMyScaffolding.</p>
+          <CardTitle>Join {inviteData?.project?.name || 'Project'}</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {inviteData?.coordinator?.full_name || 'A coordinator'} has invited you to join as <strong>{inviteData?.role}</strong>.
+            Create your account to get started.
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label>Full Name</Label>
-            <Input placeholder="Your name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+            <Label>Email</Label>
+            <Input
+              type="email"
+              value={inviteData?.email || ''}
+              disabled
+              className="bg-gray-50 text-gray-600"
+            />
+            <p className="text-xs text-muted-foreground mt-1">This email was used for the invitation.</p>
           </div>
           <div>
-            <Label>Email</Label>
-            <Input type="email" placeholder="your@email.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+            <Label>Full Name</Label>
+            <Input
+              placeholder="Your full name"
+              value={form.full_name}
+              onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+            />
           </div>
           <div>
             <Label>Password</Label>
-            <Input type="password" placeholder="Min. 8 characters" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+            <Input
+              type="password"
+              placeholder="Min. 8 characters"
+              value={form.password}
+              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+            />
           </div>
-          <Button className="w-full" onClick={handleSignupAndJoin} disabled={submitting}>
-            {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Joining...</> : 'Create Account & Join'}
+          <Button className="w-full" onClick={handleJoin} disabled={submitting}>
+            {submitting
+              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Joining...</>
+              : 'Create Account & Join'}
           </Button>
           <p className="text-xs text-center text-muted-foreground">
-            Already have an account? <Link to={`/login?redirect=/join/${token}`} className="underline">Sign in</Link>
+            Already have an account?{' '}
+            <Link to={`/login?redirect=/join?token=${token}`} className="underline">Sign in</Link>
           </p>
         </CardContent>
       </Card>

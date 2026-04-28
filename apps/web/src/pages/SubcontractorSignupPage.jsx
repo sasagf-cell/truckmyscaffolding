@@ -33,7 +33,7 @@ const SubcontractorSignupPage = () => {
       }
 
       try {
-        const res = await apiServerClient.fetch(`/subcontractors/validate-token/${token}`);
+        const res = await apiServerClient.fetch(`/site-team/validate-token/${token}`);
         const data = await res.json();
         
         if (data.valid) {
@@ -54,7 +54,7 @@ const SubcontractorSignupPage = () => {
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      const res = await apiServerClient.fetch('/subcontractors/join', {
+      const res = await apiServerClient.fetch('/site-team/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

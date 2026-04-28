@@ -1,72 +1,144 @@
-/**
- * @typedef {import('../../types').ScaffoldInspection} ScaffoldInspection
- */
-
 import pb from '../../../../lib/pocketbaseClient';
 
 /**
- * Servis za upravljanje inspekcijama skela.
- * Primenjuje robusnu validaciju i error handling.
+ * Service for managing scaffold inspections.
+ * Sprint 3C: Added scaffold_log_id linking + auto scaffold_tag update.
  */
 export const inspectionService = {
   /**
-   * Dobavlja sve inspekcije za specifičnu skelu.
-   * @param {string} scaffoldId 
-   * @returns {Promise<ScaffoldInspection[]>}
+   * Get all inspections for a project (project-level history view).
+   * @param {string} projectId
    */
-  async getByScaffoldId(scaffoldId) {
-    if (!scaffoldId) throw new Error('scaffoldId je obavezan.');
-
+  async getByProjectId(projectId) {
+    if (!projectId) throw new Error('projectId is required.');
     try {
       return await pb.collection('inspections').getFullList({
-        filter: `scaffold_id = "${scaffoldId}"`,
+        filter: pb.filter('project_id = {:pid}', { pid: projectId }),
         sort: '-created',
+        expand: 'scaffold_log_id',
+        $autoCancel: false,
       });
     } catch (error) {
-      console.error('[inspectionService] Greška pri dobavljanju inspekcija:', error);
-      throw new Error('Nije moguće učitati istoriju inspekcija. Proverite mrežnu konekciju.');
+      // Backward compat: if project_id field doesn't exist yet, fall back to scaffold_id
+      if (error.status === 400) {
+        try {
+          return await pb.collection('inspections').getFullList({
+            filter: pb.filter('scaffold_id = {:pid}', { pid: projectId }),
+            sort: '-created',
+            $autoCancel: false,
+          });
+        } catch {
+          return [];
+        }
+      }
+      console.error('[inspectionService] Failed to fetch inspections:', error);
+      throw new Error('Could not load inspection history. Check your connection.');
     }
   },
 
   /**
-   * Dobavlja poslednju (aktivnu) inspekciju.
-   * @param {string} scaffoldId 
-   * @returns {Promise<ScaffoldInspection | null>}
+   * Get inspections for a specific scaffold log.
+   * @param {string} scaffoldLogId
    */
-  async getLatest(scaffoldId) {
+  async getByScaffoldLogId(scaffoldLogId) {
+    if (!scaffoldLogId) return [];
     try {
-      const records = await pb.collection('inspections').getList(1, 1, {
-        filter: `scaffold_id = "${scaffoldId}"`,
+      return await pb.collection('inspections').getFullList({
+        filter: pb.filter('scaffold_log_id = {:lid}', { lid: scaffoldLogId }),
         sort: '-created',
+        $autoCancel: false,
       });
-      return records.items[0] || null;
     } catch (error) {
-      console.error('[inspectionService] Greška pri dobavljanju poslednje inspekcije:', error);
-      return null; // Vraćamo null kako ne bismo prekinuli UI, ali logujemo grešku
+      console.error('[inspectionService] Failed to fetch scaffold-specific inspections:', error);
+      return [];
     }
   },
 
   /**
-   * Kreira novi zapis o inspekciji.
-   * @param {Partial<ScaffoldInspection>} data 
-   * @returns {Promise<ScaffoldInspection>}
+   * Create a new inspection and auto-update the scaffold tag.
+   * @param {Object} data - Inspection data
+   * @param {string} data.status - 'pass' | 'fail'
+   * @param {string} data.notes
+   * @param {Object} data.checklist
+   * @param {string} data.scaffold_log_id - ID of the scaffold log being inspected
+   * @param {string} data.project_id
+   * @param {number} intervalDays - Project inspection interval (for next_due calc)
    */
-  async create(data) {
-    // Osnovna validacija pre slanja na server
-    if (!data.scaffold_id || !data.status) {
-      throw new Error('Nedostaju obavezni podaci (scaffold_id ili status).');
-    }
+  async create(data, intervalDays = 28) {
+    if (!data.status) throw new Error('Missing required field: status.');
+
+    const nextDue = new Date();
+    nextDue.setDate(nextDue.getDate() + intervalDays);
+
+    const payload = {
+      status: data.status,
+      notes: data.notes || '',
+      checklist: data.checklist || {},
+      next_inspection_date: nextDue.toISOString(),
+      inspector_id: pb.authStore.record?.id || pb.authStore.model?.id,
+      // Scaffold linking
+      scaffold_log_id: data.scaffold_log_id || null,
+      project_id: data.project_id || null,
+      // Backward compat: keep scaffold_id = project_id
+      scaffold_id: data.project_id || data.scaffold_id || null,
+    };
 
     try {
-      return await pb.collection('inspections').create({
-        ...data,
-        inspector_id: pb.authStore.model?.id, // Automatsko dodeljivanje trenutnog korisnika
-      });
+      const record = await pb.collection('inspections').create(payload, { $autoCancel: false });
+
+      // Auto-update scaffold tag if scaffold_log_id provided
+      if (data.scaffold_log_id) {
+        await this.updateScaffoldTagAfterInspection(
+          data.scaffold_log_id,
+          data.status,
+          intervalDays,
+          nextDue
+        );
+      }
+
+      return record;
     } catch (error) {
-      console.error('[inspectionService] Greška pri kreiranju inspekcije:', error);
-      // Detaljnija poruka ako PocketBase vrati specifičan error
-      const message = error.data?.message || 'Došlo je do greške pri čuvanju inspekcije.';
+      console.error('[inspectionService] Failed to create inspection:', error);
+      const message = error.data?.message || 'Failed to save inspection.';
       throw new Error(message);
     }
-  }
+  },
+
+  /**
+   * After an inspection, find the scaffold_tag linked to scaffold_log_id
+   * and update its status + next_inspection_due.
+   * pass → green, fail → red
+   * @param {string} scaffoldLogId
+   * @param {string} inspectionStatus - 'pass' | 'fail'
+   * @param {number} intervalDays
+   * @param {Date} nextDueDate
+   */
+  async updateScaffoldTagAfterInspection(scaffoldLogId, inspectionStatus, intervalDays, nextDueDate) {
+    try {
+      const tagStatus = inspectionStatus === 'pass' ? 'green' : 'red';
+
+      // Find the tag linked to this scaffold log
+      const tags = await pb.collection('scaffold_tags').getFullList({
+        filter: pb.filter('scaffold_log_id = {:lid}', { lid: scaffoldLogId }),
+        $autoCancel: false,
+      });
+
+      if (!tags.length) {
+        console.warn('[inspectionService] No scaffold_tag found for scaffold_log_id:', scaffoldLogId);
+        return;
+      }
+
+      const tag = tags[0];
+      await pb.collection('scaffold_tags').update(tag.id, {
+        status: tagStatus,
+        next_inspection_due: nextDueDate.toISOString(),
+        notes: `Last inspection: ${inspectionStatus.toUpperCase()} on ${new Date().toLocaleDateString('de-DE')}`,
+      }, { $autoCancel: false });
+
+      console.log(`[inspectionService] Scaffold tag ${tag.id} updated → ${tagStatus}`);
+    } catch (error) {
+      // Non-fatal: tag update failing shouldn't block the inspection record
+      console.warn('[inspectionService] Could not update scaffold_tag (non-fatal):', error.message);
+    }
+  },
 };

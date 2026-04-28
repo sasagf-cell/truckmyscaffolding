@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useSearchParams, useNavigate, useOutletContext } from 'react-router-dom';
 import {
   ClipboardList,
@@ -32,9 +32,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAlerts } from '@/hooks/useAlerts.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import pb from '@/lib/pocketbaseClient';
-import Scaffold3DPreview from '@/components/Scaffold3DPreview.jsx';
-import ScaffoldQRCode from '@/components/ScaffoldQRCode.jsx';
 import WorkerHoursWidget from '@/components/WorkerHoursWidget.jsx';
+import MorningBriefing from '@/components/MorningBriefing.jsx';
+
+const Scaffold3DPreview = lazy(() => import('@/components/Scaffold3DPreview.jsx'));
+const ScaffoldQRCode = lazy(() => import('@/components/ScaffoldQRCode.jsx'));
+
+class ThreeErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">3D preview unavailable</div>;
+    }
+    return this.props.children;
+  }
+}
 
 const DashboardPage = () => {
   const [searchParams] = useSearchParams();
@@ -126,14 +139,17 @@ const DashboardPage = () => {
 
   useEffect(() => {
     const loadDashboardData = async () => {
-      if (!selectedProject) return;
+      if (!selectedProject) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         // Fetch basic stats
         const [requests, diary, deliveries, alerts] = await Promise.all([
-          pb.collection('scaffold_requests').getList(1, 1, { filter: `projectId="${selectedProject.id}"`, $autoCancel: false }),
-          pb.collection('diary_entries').getList(1, 1, { filter: `project_id="${selectedProject.id}"`, $autoCancel: false }),
-          pb.collection('material_deliveries').getList(1, 1, { filter: `project_id="${selectedProject.id}"`, $autoCancel: false }),
+          pb.collection('scaffold_requests').getList(1, 1, { filter: pb.filter('projectId = {:pid}', { pid: selectedProject.id }), $autoCancel: false }),
+          pb.collection('diary_entries').getList(1, 1, { filter: pb.filter('project_id = {:pid}', { pid: selectedProject.id }), $autoCancel: false }),
+          pb.collection('material_deliveries').getList(1, 1, { filter: pb.filter('project_id = {:pid}', { pid: selectedProject.id }), $autoCancel: false }),
           fetchAlertCount()
         ]);
 
@@ -147,7 +163,7 @@ const DashboardPage = () => {
 
         // Fetch recent activity (combining requests and diary entries for demo)
         const recentReqs = await pb.collection('scaffold_requests').getList(1, 3, { 
-          filter: `projectId="${selectedProject.id}"`, 
+          filter: pb.filter('projectId = {:pid}', { pid: selectedProject.id }),
           sort: '-created',
           $autoCancel: false 
         });
@@ -176,23 +192,30 @@ const DashboardPage = () => {
           return day !== 0 && day !== 6;
         });
 
-        const [pendingReqs, recentDiary] = await Promise.all([
+        const todayStr = now.toISOString().split('T')[0];
+
+        const [pendingReqs, recentDiary, overdueTagsRes] = await Promise.all([
           pb.collection('scaffold_requests').getFullList({
-            filter: `projectId="${selectedProject.id}" && status="Pending" && created<"${cutoff48h}"`,
+            filter: pb.filter('projectId = {:pid} && status = "Pending" && created < {:t}', { pid: selectedProject.id, t: cutoff48h }),
             $autoCancel: false
           }),
           pb.collection('diary_entries').getFullList({
-            filter: `project_id="${selectedProject.id}" && date>="${weekdays[weekdays.length - 1]}"`,
+            filter: pb.filter('project_id = {:pid} && date >= {:d}', { pid: selectedProject.id, d: weekdays[weekdays.length - 1] }),
             fields: 'date',
             $autoCancel: false
-          })
+          }),
+          pb.collection('scaffold_tags').getFullList({
+            filter: pb.filter('project_id = {:pid} && status = "green" && next_inspection_due < {:today}', { pid: selectedProject.id, today: todayStr }),
+            fields: 'id',
+            $autoCancel: false
+          }).catch(() => []) // graceful fallback if collection missing
         ]);
 
         const diaryDates = new Set(recentDiary.map(e => e.date?.split(' ')[0]));
         const missingDays = weekdays.filter(d => !diaryDates.has(d)).length;
 
         setRiskMetrics({
-          overdueInspections: 0,
+          overdueInspections: overdueTagsRes.length,
           pendingRequestsOver48h: pendingReqs.length,
           missingDiaryEntries: missingDays,
         });
@@ -238,6 +261,9 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+      {/* AI Morning Briefing — shows once per day */}
+      <MorningBriefing projectId={selectedProject?.id} projectName={selectedProject?.name} />
+
       {/* Alert Banner */}
       {alertCount > 0 && showAlertBanner && (
         <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 flex items-start sm:items-center justify-between gap-4">
@@ -531,7 +557,11 @@ const DashboardPage = () => {
               Digital Twin (Active)
             </h3>
             <div className="h-[200px] mb-4">
-              <Scaffold3DPreview width={1.8} length={2.2} height={4.5} />
+              <ThreeErrorBoundary>
+                <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading 3D...</div>}>
+                  <Scaffold3DPreview width={1.8} length={2.2} height={4.5} />
+                </Suspense>
+              </ThreeErrorBoundary>
             </div>
             <div className="p-3 bg-black/40 rounded-lg border border-white/5">
               <p className="text-[11px] text-muted-foreground">Monitoring active scaffold SN-2026-042</p>
@@ -545,10 +575,14 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <ScaffoldQRCode 
-            scaffoldId="demo-scaffold-042" 
-            tagNumber="SN-2026-042"
-          />
+          <ThreeErrorBoundary>
+            <Suspense fallback={<div className="flex items-center justify-center h-24 text-muted-foreground text-sm">Loading QR...</div>}>
+              <ScaffoldQRCode
+                scaffoldId="demo-scaffold-042"
+                tagNumber="SN-2026-042"
+              />
+            </Suspense>
+          </ThreeErrorBoundary>
         </div>
       </div>
     </div>

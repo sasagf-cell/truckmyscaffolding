@@ -1,57 +1,83 @@
 import React from 'react';
-import SafetyTag from './SafetyTag';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Loader2, ShieldCheck, ShieldAlert, ClipboardX } from 'lucide-react';
 
-/**
- * Tabela koja prikazuje istoriju inspekcija.
- * @param {Object} props
- * @param {Array} props.list - Lista inspekcija
- * @param {boolean} props.isLoading - Status učitavanja
- */
 const InspectionHistory = ({ list, isLoading }) => {
   if (isLoading && list.length === 0) {
     return (
-      <div className="flex justify-center p-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-7 h-7 animate-spin text-primary" />
       </div>
     );
   }
 
   if (list.length === 0) {
     return (
-      <div className="text-center p-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-        <p className="text-gray-500 italic">Nema zabeleženih inspekcija za ovu skelu.</p>
-      </div>
+      <Card className="py-14 text-center">
+        <ClipboardX className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
+        <p className="text-muted-foreground font-medium">No inspection records yet</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Complete an inspection using the form to start building a history.
+        </p>
+      </Card>
     );
   }
 
   return (
-    <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div className="overflow-x-auto rounded-xl border border-border">
+      <table className="min-w-full divide-y divide-border">
+        <thead className="bg-muted/50">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Datum</th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Napomena</th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sledeći pregled</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Scaffold</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Result</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Notes</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Next Due</th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {list.map((item) => (
-            <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                {new Date(item.created).toLocaleDateString()}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <SafetyTag status={item.status} className="scale-90 origin-left" />
-              </td>
-              <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
-                {item.notes || '—'}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {item.next_inspection_date ? new Date(item.next_inspection_date).toLocaleDateString() : 'N/A'}
-              </td>
-            </tr>
-          ))}
+        <tbody className="divide-y divide-border bg-card">
+          {list.map((item) => {
+            const isPast = item.next_inspection_date
+              ? new Date(item.next_inspection_date) < new Date()
+              : false;
+            const scaffoldNum =
+              item.expand?.scaffold_log_id?.scaffold_number ||
+              (item.scaffold_log_id ? `LOG-${item.scaffold_log_id.slice(-4).toUpperCase()}` : '—');
+
+            return (
+              <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  {new Date(item.created).toLocaleDateString('de-DE')}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                  {scaffoldNum}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {item.status === 'pass' ? (
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 gap-1">
+                      <ShieldCheck className="w-3 h-3" /> PASS
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 gap-1">
+                      <ShieldAlert className="w-3 h-3" /> FAIL
+                    </Badge>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-sm text-muted-foreground max-w-[200px] truncate">
+                  {item.notes || '—'}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  {item.next_inspection_date ? (
+                    <span className={isPast ? 'text-red-600 dark:text-red-400 font-medium' : 'text-muted-foreground'}>
+                      {new Date(item.next_inspection_date).toLocaleDateString('de-DE')}
+                      {isPast && ' ⚠'}
+                    </span>
+                  ) : '—'}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

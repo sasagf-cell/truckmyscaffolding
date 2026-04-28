@@ -14,7 +14,7 @@ const NOTIFICATION_ITEMS = [
   { id: 'scaffoldRequestRejected', label: 'Scaffold Request Rejected', description: 'Receive an email when a request is rejected or needs changes.' },
   { id: 'siteDiaryReminder', label: 'Site Diary Reminder', description: 'Daily reminder if the site diary has not been filled out.' },
   { id: 'materialDeliveryNotification', label: 'Material Delivery', description: 'Alerts for upcoming or completed material deliveries.' },
-  { id: 'teamMemberInvited', label: 'Team Member Invited', description: 'Notification when a new subcontractor joins the project.' },
+  { id: 'teamMemberInvited', label: 'Team Member Invited', description: 'Notification when a new Site Team member joins the project.' },
   { id: 'alertGenerated', label: 'System Alerts', description: 'Immediate notification for critical system alerts (e.g., safety incidents).' },
   { id: 'weeklySummaryReport', label: 'Weekly Summary Report', description: 'Receive a weekly digest of project activities.' },
   { id: 'monthlySummaryReport', label: 'Monthly Summary Report', description: 'Receive a comprehensive monthly project report.' },

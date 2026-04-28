@@ -72,7 +72,7 @@ const ScaffoldRequestsList = () => {
     const fetchContractors = async () => {
       try {
         const users = await pb.collection('users').getFullList({
-          filter: 'role="Subcontractor"',
+          filter: 'role="Worker"',
           $autoCancel: false
         });
         setContractors(users);
@@ -86,27 +86,31 @@ const ScaffoldRequestsList = () => {
   const loadData = async () => {
     if (!selectedProject) return;
 
-    let filterParts = [`projectId = "${selectedProject.id}"`];
-    
+    // pb.filter() safely escapes all values — prevents PocketBase filter injection
+    const filterParts = [pb.filter('projectId = {:pid}', { pid: selectedProject.id })];
+
     if (filters.statuses.length > 0) {
-      const statusQuery = filters.statuses.map(s => `status="${s}"`).join(' || ');
+      // statuses come from a controlled multi-select — still escape each value
+      const statusQuery = filters.statuses
+        .map(s => pb.filter('status = {:s}', { s }))
+        .join(' || ');
       filterParts.push(`(${statusQuery})`);
     }
 
     if (filters.contractor !== 'all') {
-      filterParts.push(`createdBy="${filters.contractor}"`);
+      filterParts.push(pb.filter('createdBy = {:c}', { c: filters.contractor }));
     }
 
     if (filters.dateFrom) {
-      filterParts.push(`requestedDate >= "${filters.dateFrom} 00:00:00"`);
+      filterParts.push(pb.filter('requestedDate >= {:d}', { d: `${filters.dateFrom} 00:00:00` }));
     }
 
     if (filters.dateTo) {
-      filterParts.push(`requestedDate <= "${filters.dateTo} 23:59:59"`);
+      filterParts.push(pb.filter('requestedDate <= {:d}', { d: `${filters.dateTo} 23:59:59` }));
     }
 
     if (filters.search) {
-      filterParts.push(`(id ~ "${filters.search}" || location ~ "${filters.search}")`);
+      filterParts.push(pb.filter('(id ~ {:q} || location ~ {:q})', { q: filters.search }));
     }
 
     const filterStr = filterParts.join(' && ');

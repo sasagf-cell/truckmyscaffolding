@@ -80,21 +80,45 @@ export const useSettings = () => {
     }
   }, [toast]);
 
+  const updateProjectDetails = useCallback(async (projectId, data) => {
+    setLoading(true);
+    try {
+      const updated = await pb.collection('projects').update(projectId, {
+        name: data.name,
+        location: data.location,
+        type: data.type,
+        description: data.description,
+        status: data.status,
+      }, { $autoCancel: false });
+      toast({ title: 'Success', description: 'Project details updated.' });
+      return updated;
+    } catch (err) {
+      console.error('Error updating project details:', err);
+      const pbDetail = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+      toast({ title: 'Error', description: pbDetail || 'Failed to update project', variant: 'destructive' });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
   const updateProjectSettings = useCallback(async (projectId, data) => {
     setLoading(true);
     try {
-      const res = await apiServerClient.fetch(`/projects/${projectId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!res.ok) throw new Error((await res.json()).error || 'Failed to update project');
-      const result = await res.json();
+      const updated = await pb.collection('projects').update(projectId, {
+        contract_type: data.contract_type,
+        inspection_interval_days: data.inspection_interval_days,
+        primary_scaffold_system: data.scaffold_system || data.primary_scaffold_system || '',
+        allow_mixed_systems: data.allow_mixed_systems ?? false,
+        rate: data.rate != null && data.rate !== '' ? parseFloat(data.rate) || 0 : undefined,
+        rate_currency: data.rate_currency || 'EUR',
+        rate_unit: data.rate_unit || '',
+      }, { $autoCancel: false });
       toast({ title: 'Success', description: 'Project settings updated.' });
-      return result.project;
+      return updated;
     } catch (err) {
       console.error('Error updating project:', err);
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Error', description: err.message || 'Failed to update project', variant: 'destructive' });
       return null;
     } finally {
       setLoading(false);
@@ -105,7 +129,7 @@ export const useSettings = () => {
     setLoading(true);
     try {
       const records = await pb.collection('notificationPreferences').getFullList({
-        filter: `userId="${userId}"`,
+        filter: pb.filter('userId = {:uid}', { uid: userId }),
         $autoCancel: false
       });
       return records.length > 0 ? records[0] : null;
@@ -180,6 +204,7 @@ export const useSettings = () => {
     updateUserProfile,
     updateUserAvatar,
     getProjectSettings,
+    updateProjectDetails,
     updateProjectSettings,
     getNotificationPreferences,
     updateNotificationPreferences,

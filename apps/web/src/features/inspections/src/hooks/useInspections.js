@@ -2,25 +2,32 @@ import { useState, useEffect, useCallback } from 'react';
 import { inspectionService } from '../services/inspectionService';
 
 /**
- * Custom hook za rad sa inspekcijama specifične skele.
- * @param {string} scaffoldId 
+ * Hook for managing scaffold inspections.
+ * Sprint 3C: Updated to support project-level + scaffold-log-level filtering.
+ * @param {string} projectId - Always required (project scope)
+ * @param {string|null} scaffoldLogId - Optional: filter to specific scaffold log
+ * @param {number} intervalDays - Project inspection interval (default 28)
  */
-export const useInspections = (scaffoldId) => {
+export const useInspections = (projectId, scaffoldLogId = null, intervalDays = 28) => {
   const [inspections, setInspections] = useState([]);
   const [latest, setLatest] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  /**
-   * Osvežava podatke o inspekcijama.
-   */
   const refresh = useCallback(async () => {
-    if (!scaffoldId) return;
+    if (!projectId) return;
 
     setLoading(true);
     setError(null);
     try {
-      const data = await inspectionService.getByScaffoldId(scaffoldId);
+      let data;
+      if (scaffoldLogId) {
+        // Show only inspections for the selected scaffold log
+        data = await inspectionService.getByScaffoldLogId(scaffoldLogId);
+      } else {
+        // Show all project inspections
+        data = await inspectionService.getByProjectId(projectId);
+      }
       setInspections(data);
       setLatest(data[0] || null);
     } catch (err) {
@@ -28,22 +35,22 @@ export const useInspections = (scaffoldId) => {
     } finally {
       setLoading(false);
     }
-  }, [scaffoldId]);
+  }, [projectId, scaffoldLogId]);
 
-  /**
-   * Dodaje novu inspekciju i osvežava listu.
-   * @param {Object} inspectionData 
-   */
   const addInspection = async (inspectionData) => {
     setLoading(true);
     setError(null);
     try {
-      const newRecord = await inspectionService.create({
-        ...inspectionData,
-        scaffold_id: scaffoldId
-      });
-      
-      // Lokalno ažuriramo state za instant feedback
+      const newRecord = await inspectionService.create(
+        {
+          ...inspectionData,
+          project_id: projectId,
+          scaffold_log_id: scaffoldLogId,
+        },
+        intervalDays
+      );
+
+      // Optimistic update
       setInspections(prev => [newRecord, ...prev]);
       setLatest(newRecord);
       return newRecord;
@@ -55,7 +62,6 @@ export const useInspections = (scaffoldId) => {
     }
   };
 
-  // Automatsko učitavanje pri inicijalizaciji
   useEffect(() => {
     refresh();
   }, [refresh]);
@@ -66,6 +72,6 @@ export const useInspections = (scaffoldId) => {
     loading,
     error,
     refresh,
-    addInspection
+    addInspection,
   };
 };

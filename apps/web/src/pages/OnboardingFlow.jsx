@@ -52,7 +52,7 @@ const OnboardingFlow = () => {
       if (subcontractorEmail.trim()) {
         try {
           const inviteToken = crypto.randomUUID();
-          await pb.collection('subcontractors').create({
+          await pb.collection('site_team_invites').create({
             projectId: project.id,
             email: subcontractorEmail,
             role: 'Worker',
@@ -64,7 +64,7 @@ const OnboardingFlow = () => {
           }, { $autoCancel: false });
         } catch (inviteError) {
           console.error('Subcontractor invite failed (non-blocking):', inviteError);
-          // Don't block onboarding — user can invite subcontractors from Settings later
+          // Don't block onboarding — user can invite Site Team from Settings later
         }
       }
 

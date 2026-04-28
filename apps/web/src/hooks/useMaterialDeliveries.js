@@ -58,7 +58,7 @@ export const useMaterialDeliveries = () => {
   const fetchMaterialItems = useCallback(async (deliveryId) => {
     try {
       const items = await pb.collection('material_items').getFullList({
-        filter: `delivery_id="${deliveryId}"`,
+        filter: pb.filter('delivery_id = {:did}', { did: deliveryId }),
         $autoCancel: false
       });
       return items;

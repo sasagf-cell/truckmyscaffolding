@@ -210,7 +210,7 @@ const ScaffoldRequestDetail = () => {
                 <Table>
                   <TableHeader className="bg-muted/50">
                     <TableRow>
-                      <TableHead>Worker Role</TableHead>
+                      <TableHead>Worker Code / Role</TableHead>
                       <TableHead className="text-right">Hours</TableHead>
                       <TableHead className="text-right">Rate</TableHead>
                       <TableHead className="text-right">Subtotal</TableHead>

@@ -19,6 +19,7 @@ import Footer from '@/components/Footer.jsx';
 // Pages
 import HomePage from '@/pages/HomePage.jsx';
 import OnboardingFlow from '@/pages/OnboardingFlow.jsx';
+import DashboardPage from '@/pages/DashboardPage.jsx';
 const PricingPage = React.lazy(() => import('@/pages/PricingPage.jsx'));
 
 // Lazy load other pages for performance
@@ -32,7 +33,6 @@ const AdminEmailTemplatesPage = React.lazy(() => import('@/pages/AdminEmailTempl
 const UnsubscribeSuccessPage = React.lazy(() => import('@/pages/UnsubscribeSuccessPage.jsx'));
 
 // Dashboard Core
-const DashboardPage = React.lazy(() => import('@/pages/DashboardPage.jsx'));
 const ScaffoldRequestsList = React.lazy(() => import('@/pages/ScaffoldRequestsList.jsx'));
 const ScaffoldRequestForm = React.lazy(() => import('@/pages/ScaffoldRequestForm.jsx'));
 const ScaffoldRequestDetail = React.lazy(() => import('@/pages/ScaffoldRequestDetail.jsx'));
@@ -46,18 +46,25 @@ const AIAssistantPage = React.lazy(() => import('@/pages/AIAssistantPage.jsx'));
 const ReportGenerator = React.lazy(() => import('@/pages/ReportGenerator.jsx'));
 const SubcontractorListPage = React.lazy(() => import('@/pages/SubcontractorListPage.jsx'));
 const SubcontractorDetailPage = React.lazy(() => import('@/pages/SubcontractorDetailPage.jsx'));
-const SubcontractorSignupPage = React.lazy(() => import('@/pages/SubcontractorSignupPage.jsx'));
 const SettingsPage = React.lazy(() => import('@/pages/SettingsPage.jsx'));
 
 // New Feature Pages
 const ScaffoldLogsPage = React.lazy(() => import('@/pages/ScaffoldLogsPage.jsx'));
+const ScaffoldTagsPage = React.lazy(() => import('@/pages/ScaffoldTagsPage.jsx'));
 const MaterialMasterDataPage = React.lazy(() => import('@/pages/MaterialMasterDataPage.jsx'));
 const SafetyInspectionsPage = React.lazy(() => import('@/features/inspections/src/SafetyInspectionsPage.jsx'));
 const WorkerHoursPage = React.lazy(() => import('@/pages/WorkerHoursPage.jsx'));
 const JoinProjectPage = React.lazy(() => import('@/pages/JoinProjectPage.jsx'));
 
 
-const LoadingFallback = () => <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+const LoadingFallback = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="text-center">
+      <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+      <p className="text-sm text-muted-foreground">Loading...</p>
+    </div>
+  </div>
+);
 
 // Analytics Wrapper Component
 const AnalyticsWrapper = ({ children }) => {
@@ -107,8 +114,7 @@ function AppContent() {
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/join" element={<SubcontractorSignupPage />} />
-            <Route path="/join/:token" element={<JoinProjectPage />} />
+            <Route path="/join" element={<JoinProjectPage />} />
             <Route path="/unsubscribe-success" element={<UnsubscribeSuccessPage />} />
             <Route path="/dev/seo-audit" element={<SEOAuditPage />} />
             
@@ -136,6 +142,7 @@ function AppContent() {
             <Route path="/dashboard" element={<DashboardPage />} />
             
             <Route path="/scaffold-logs" element={<ScaffoldLogsPage />} />
+            <Route path="/scaffold-tags" element={<ScaffoldTagsPage />} />
             <Route path="/material-master-data" element={<MaterialMasterDataPage />} />
             <Route path="/dashboard/inspections" element={<SafetyInspectionsPage />} />
             <Route path="/dashboard/worker-hours" element={<WorkerHoursPage />} />

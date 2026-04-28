@@ -95,8 +95,8 @@ const HomePage = () => {
     <div className="flex flex-col min-h-screen bg-[#f9fafb]">
       {headTags}
 
-      {/* HERO */}
-      <section id="hero" className="section-padding bg-white border-b border-[#e5e7eb]">
+      {/* HERO — bg-[#f0fdf4] = deploy verify marker Sprint3 25.04 */}
+      <section id="hero" className="section-padding bg-[#f0fdf4] border-b border-[#e5e7eb]">
         <div className="container-default">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="max-w-2xl">

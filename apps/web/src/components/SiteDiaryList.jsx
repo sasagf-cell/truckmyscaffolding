@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Search, Filter } from 'lucide-react';
+import pb from '@/lib/pocketbaseClient';
 import { useSiteDiary } from '@/hooks/useSiteDiary.js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,14 +40,15 @@ const SiteDiaryList = ({ projectId }) => {
   const loadData = async () => {
     if (!projectId) return;
 
-    let filterStr = `project_id = "${projectId}"`;
-    
+    // pb.filter() safely escapes all values — prevents PocketBase filter injection
+    const filterParts = [pb.filter('project_id = {:pid}', { pid: projectId })];
     if (weatherFilter !== 'all') {
-      filterStr += ` && weather = "${weatherFilter}"`;
+      filterParts.push(pb.filter('weather = {:w}', { w: weatherFilter }));
     }
     if (searchTerm) {
-      filterStr += ` && (work_summary ~ "${searchTerm}" || notes ~ "${searchTerm}")`;
+      filterParts.push(pb.filter('(work_summary ~ {:q} || notes ~ {:q})', { q: searchTerm }));
     }
+    const filterStr = filterParts.join(' && ');
 
     const result = await fetchEntries(currentPage, 10, filterStr);
     if (result) {

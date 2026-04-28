@@ -14,7 +14,7 @@ export const useChatConversations = (projectId, userId) => {
     setError(null);
     try {
       const result = await pb.collection('chat_conversations').getList(1, 1, {
-        filter: `project_id="${projectId}" && user_id="${userId}"`,
+        filter: pb.filter('project_id = {:pid} && user_id = {:uid}', { pid: projectId, uid: userId }),
         $autoCancel: false
       });
       

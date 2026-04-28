@@ -13,7 +13,7 @@ import QRGeneratorModal from '@/components/QRGeneratorModal.jsx';
 
 const ProjectSettingsTab = () => {
   const { selectedProject } = useOutletContext() ?? {};
-  const { getProjectSettings, updateProjectSettings, loading } = useSettings();
+  const { getProjectSettings, updateProjectDetails, loading } = useSettings();
   const [qrModalOpen, setQrModalOpen] = useState(false);
 
   const [project, setProject] = useState({
@@ -54,7 +54,7 @@ const ProjectSettingsTab = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!selectedProject?.id) return;
-    await updateProjectSettings(selectedProject.id, project);
+    await updateProjectDetails(selectedProject.id, project);
   };
 
   if (!selectedProject) {

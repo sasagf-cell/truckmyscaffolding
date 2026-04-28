@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Search, Eye, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import pb from '@/lib/pocketbaseClient';
 import { useMaterialDeliveries } from '@/hooks/useMaterialDeliveries.js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,17 +48,18 @@ const MaterialDeliveriesList = ({ projectId }) => {
   const loadData = async () => {
     if (!projectId) return;
 
-    let filterStr = `project_id = "${projectId}"`;
-    
+    // pb.filter() safely escapes all values — prevents PocketBase filter injection
+    const filterParts = [pb.filter('project_id = {:pid}', { pid: projectId })];
     if (statusFilter !== 'all') {
-      filterStr += ` && status = "${statusFilter}"`;
+      filterParts.push(pb.filter('status = {:s}', { s: statusFilter }));
     }
     if (lkwFilter !== 'all') {
-      filterStr += ` && lkw_id = "${lkwFilter}"`;
+      filterParts.push(pb.filter('lkw_id = {:lkw}', { lkw: lkwFilter }));
     }
     if (searchTerm) {
-      filterStr += ` && (lkw_id ~ "${searchTerm}" || driver_name ~ "${searchTerm}")`;
+      filterParts.push(pb.filter('(lkw_id ~ {:q} || driver_name ~ {:q})', { q: searchTerm }));
     }
+    const filterStr = filterParts.join(' && ');
 
     const result = await fetchDeliveries(currentPage, 10, filterStr);
     if (result) {

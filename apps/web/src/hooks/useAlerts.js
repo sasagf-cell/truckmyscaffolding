@@ -13,7 +13,10 @@ export const useAlerts = (projectId) => {
     setLoading(true);
     setError(null);
     try {
-      const filter = `project_id="${projectId}"${type !== 'all' ? ` && type="${type}"` : ''}`;
+      // pb.filter() safely escapes all values — prevents PocketBase filter injection
+      const filterParts = [pb.filter('project_id = {:pid}', { pid: projectId })];
+      if (type !== 'all') filterParts.push(pb.filter('type = {:t}', { t: type }));
+      const filter = filterParts.join(' && ');
       const result = await pb.collection('alerts').getList(page, perPage, {
         filter,
         sort: '-created',
@@ -34,7 +37,7 @@ export const useAlerts = (projectId) => {
     try {
       // Fetch all unread alerts to calculate counts
       const result = await pb.collection('alerts').getFullList({
-        filter: `project_id="${projectId}" && is_read=false`,
+        filter: pb.filter('project_id = {:pid} && is_read = false', { pid: projectId }),
         $autoCancel: false
       });
       

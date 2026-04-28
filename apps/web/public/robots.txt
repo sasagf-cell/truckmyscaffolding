@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://trackmyscaffolding.com/sitemap.xml

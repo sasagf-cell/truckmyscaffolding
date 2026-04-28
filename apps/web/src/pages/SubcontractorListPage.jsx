@@ -81,7 +81,7 @@ const SubcontractorListPage = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Team Members</h1>
-          <p className="text-muted-foreground">Manage subcontractors and access permissions for {selectedProject.name}</p>
+          <p className="text-muted-foreground">Manage Site Team access and permissions for {selectedProject.name}</p>
         </div>
         <Button onClick={() => setIsInviteModalOpen(true)}>
           <UserPlus className="w-4 h-4 mr-2" />

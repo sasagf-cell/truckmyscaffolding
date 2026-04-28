@@ -17,21 +17,22 @@ const WorkerHoursWidget = ({ projectId }) => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const today = new Date().toISOString().split('T')[0];
-        let dateFilter = '';
+        const today = format(new Date(), 'yyyy-MM-dd');
+        // Build date-range filter parts using pb.filter() for safe escaping
+        const hoursFilterParts = [pb.filter('project_id = {:pid}', { pid: projectId })];
         if (timeframe === 'week') {
           const start = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
           const end = format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
-          dateFilter = ` && date >= "${start}" && date <= "${end}"`;
+          hoursFilterParts.push(pb.filter('date >= {:s} && date <= {:e}', { s: start, e: end }));
         } else if (timeframe === 'month') {
           const start = format(startOfMonth(new Date()), 'yyyy-MM-dd');
           const end = format(endOfMonth(new Date()), 'yyyy-MM-dd');
-          dateFilter = ` && date >= "${start}" && date <= "${end}"`;
+          hoursFilterParts.push(pb.filter('date >= {:s} && date <= {:e}', { s: start, e: end }));
         }
         const [workers, hours, todayHours] = await Promise.all([
-          pb.collection('project_workers').getList(1, 1, { filter: `project_id = "${projectId}"`, $autoCancel: false }),
-          pb.collection('worker_hours').getFullList({ filter: `project_id = "${projectId}"${dateFilter}`, $autoCancel: false }),
-          pb.collection('worker_hours').getFullList({ filter: `project_id = "${projectId}" && date = "${today}"`, $autoCancel: false })
+          pb.collection('project_workers').getList(1, 1, { filter: pb.filter('project_id = {:pid}', { pid: projectId }), $autoCancel: false }),
+          pb.collection('worker_hours').getFullList({ filter: hoursFilterParts.join(' && '), $autoCancel: false }),
+          pb.collection('worker_hours').getFullList({ filter: pb.filter('project_id = {:pid} && date = {:d}', { pid: projectId, d: today }), $autoCancel: false })
         ]);
         const total = hours.reduce((s, h) => s + (h.regular_hours || 0) + (h.overtime_hours || 0), 0);
         const todays = todayHours.reduce((s, h) => s + (h.regular_hours || 0) + (h.overtime_hours || 0), 0);

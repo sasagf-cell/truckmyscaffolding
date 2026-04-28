@@ -9,6 +9,7 @@ import routes from './routes/index.js';
 import { errorMiddleware } from './middleware/index.js';
 import logger from './utils/logger.js';
 import emailJobs from './jobs/emailJobs.js';
+import { runMigrations } from './utils/migrations.js';
 
 const app = express();
 
@@ -35,10 +36,27 @@ process.on('SIGTERM', async () => {
 });
 
 app.use(helmet());
-app.use(cors({
-	origin: process.env.CORS_ORIGIN,
+
+const allowedOrigins = [
+	process.env.CORS_ORIGIN,
+	'https://trackmyscaffolding.com',
+	'https://www.trackmyscaffolding.com',
+	'http://localhost:3000',
+].filter(Boolean);
+
+const corsOptions = {
+	origin: (origin, callback) => {
+		if (!origin) return callback(null, true);
+		if (allowedOrigins.includes(origin)) return callback(null, true);
+		callback(new Error(`CORS blocked: ${origin}`));
+	},
 	credentials: true,
-}));
+	methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+	allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight for all routes
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -54,8 +72,16 @@ app.use((req, res) => {
 
 const port = process.env.PORT || 3001;
 
-app.listen(port, () => {
+app.listen(port, async () => {
 	logger.info(`🚀 API Server running on http://localhost:${port}`);
+
+	// Run DB migrations (idempotent — safe on every startup)
+	try {
+		await runMigrations();
+		logger.info('Migrations complete');
+	} catch (err) {
+		logger.error('Migration error:', err?.message || err);
+	}
 
 	// Initialize email system
 	logger.info('Email system initialized');

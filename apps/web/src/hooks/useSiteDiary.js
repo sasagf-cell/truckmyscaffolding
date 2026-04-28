@@ -133,7 +133,7 @@ export const useSiteDiary = () => {
       const nextDayStr = nextDay.toISOString().split('T')[0];
 
       const result = await pb.collection('diary_entries').getList(1, 1, {
-        filter: `project_id = "${projectId}" && date >= "${dateStr}" && date < "${nextDayStr}"`,
+        filter: pb.filter('project_id = {:pid} && date >= {:d1} && date < {:d2}', { pid: projectId, d1: dateStr, d2: nextDayStr }),
         $autoCancel: false
       });
       return result.items.length > 0 ? result.items[0] : null;

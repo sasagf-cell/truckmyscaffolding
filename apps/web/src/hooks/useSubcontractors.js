@@ -11,8 +11,8 @@ export const useSubcontractors = () => {
   const fetchSubcontractors = useCallback(async (projectId) => {
     setLoading(true);
     try {
-      return await pb.collection('subcontractors').getFullList({
-        filter: projectId ? `projectId="${projectId}"` : '',
+      return await pb.collection('site_team_invites').getFullList({
+        filter: projectId ? pb.filter('projectId = {:pid}', { pid: projectId }) : '',
         expand: 'userId',
         $autoCancel: false
       });
@@ -28,7 +28,7 @@ export const useSubcontractors = () => {
     setLoading(true);
     try {
       // Use the new email-integrated backend endpoint
-      const res = await apiServerClient.fetch('/email/send-invite', {
+      const res = await apiServerClient.fetch('/site-team/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -46,11 +46,18 @@ export const useSubcontractors = () => {
       }
       
       const result = await res.json();
-      toast({ title: 'Success', description: 'Invitation sent successfully.' });
-      
+
+      if (!result.emailSent && result.emailError) {
+        // Record created but email failed — still show success UI but warn user
+        toast({ title: 'Invite created', description: `Record saved but email failed: ${JSON.stringify(result.emailError)}`, variant: 'destructive' });
+        console.error('Email error from server:', result.emailError);
+      } else {
+        toast({ title: 'Success', description: 'Invitation sent successfully.' });
+      }
+
       // Construct invite URL if not provided directly by backend
       const inviteUrl = result.inviteUrl || `${window.location.origin}/join?token=${result.inviteToken || result.subcontractorId}`;
-      
+
       return { success: true, inviteUrl };
     } catch (err) {
       console.error('Error inviting subcontractor:', err);
@@ -64,12 +71,13 @@ export const useSubcontractors = () => {
   const listSubcontractors = useCallback(async (projectId, page = 1, pageSize = 20, filters = {}) => {
     setLoading(true);
     try {
-      const filterParts = [`projectId="${projectId}"`];
-      if (filters.status) filterParts.push(`status="${filters.status}"`);
-      if (filters.role) filterParts.push(`role="${filters.role}"`);
-      if (filters.search) filterParts.push(`userId.full_name~"${filters.search}"`);
+      // pb.filter() safely escapes all values — prevents PocketBase filter injection
+      const filterParts = [pb.filter('projectId = {:pid}', { pid: projectId })];
+      if (filters.status && filters.status !== 'all') filterParts.push(pb.filter('status = {:s}', { s: filters.status }));
+      if (filters.role && filters.role !== 'all') filterParts.push(pb.filter('role = {:r}', { r: filters.role }));
+      if (filters.search) filterParts.push(pb.filter('userId.full_name ~ {:q}', { q: filters.search }));
 
-      return await pb.collection('subcontractors').getList(page, pageSize, {
+      return await pb.collection('site_team_invites').getList(page, pageSize, {
         filter: filterParts.join(' && '),
         expand: 'userId',
         sort: '-created',

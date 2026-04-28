@@ -68,7 +68,7 @@ const MaterialDeliveryForm = () => {
       if (isEditMode || !selectedProject) return;
       try {
         const existing = await pb.collection('material_deliveries').getFullList({
-          filter: `project_id="${selectedProject.id}"`,
+          filter: pb.filter('project_id = {:pid}', { pid: selectedProject.id }),
           sort: '-created',
           $autoCancel: false
         });

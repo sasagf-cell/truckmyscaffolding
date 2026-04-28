@@ -17,10 +17,26 @@ export const AuthProvider = ({ children }) => {
   const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    if (pb.authStore.isValid && pb.authStore.model) {
-      setCurrentUser(pb.authStore.model);
-    }
-    setInitialLoading(false);
+    const initAuth = async () => {
+      if (pb.authStore.isValid && pb.authStore.model) {
+        // Set cached model immediately so UI isn't blank
+        setCurrentUser(pb.authStore.model);
+        try {
+          // Refresh from PocketBase to get fresh record with all fields (role, plan, etc.)
+          const authData = await pb.collection('users').authRefresh({ $autoCancel: false });
+          setCurrentUser(authData.record);
+        } catch (err) {
+          // Only force logout on explicit auth errors (401), not network failures
+          if (err?.status === 401 || err?.status === 403) {
+            pb.authStore.clear();
+            setCurrentUser(null);
+          }
+          // Otherwise keep existing cached user — refresh will succeed next time
+        }
+      }
+      setInitialLoading(false);
+    };
+    initAuth();
   }, []);
 
   const login = async (email, password) => {
@@ -40,7 +56,7 @@ export const AuthProvider = ({ children }) => {
         company_name: userData.company_name,
         vat_number: userData.vat_number || '',
         role: userData.role || 'Coordinator',
-        language: userData.language || 'EN',
+        language: userData.language || 'en',
         plan: 'free',
         unsubscribeToken: crypto.randomUUID()
       };

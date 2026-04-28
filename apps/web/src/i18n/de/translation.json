@@ -15,5 +15,37 @@
   "common": {
     "install_app": "App installieren",
     "logout": "Abmelden"
+  },
+  "briefing": {
+    "greeting_morning": "Guten Morgen, {{name}} 👋",
+    "greeting_afternoon": "Willkommen zurück, {{name}} 👋",
+    "greeting_evening": "Guten Abend, {{name}} 👋",
+    "greeting_morning_anon": "Guten Morgen 👋",
+    "greeting_afternoon_anon": "Willkommen zurück 👋",
+    "all_clear_project": "Alles in Ordnung beim Projekt <strong>{{name}}</strong>.",
+    "all_clear_detail": "Keine überfälligen Prüfungen, kein Gerüst mit rotem Tag. Ausgezeichneter Status!",
+    "overdue_one": "{{count}} Prüfung ist überfällig — sofortiger Handlungsbedarf.",
+    "overdue_other": "{{count}} Prüfungen sind überfällig — sofortiger Handlungsbedarf.",
+    "red_tag_one": "{{count}} Gerüst trägt roten Tag — Benutzung verboten.",
+    "red_tag_other": "{{count}} Gerüste tragen roten Tag — Benutzung verboten.",
+    "upcoming_one": "{{count}} Prüfung fällig in 7 Tagen (nächste in {{days}} Tag).",
+    "upcoming_other": "{{count}} Prüfungen fällig in 7 Tagen (nächste in {{days}} Tagen).",
+    "action_schedule": "Prüfungen planen",
+    "action_view_tags": "Gerüst-Tags ansehen"
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "all_clear": "Alles in Ordnung",
+    "all_clear_desc": "Keine aktiven Warnungen für dieses Projekt",
+    "overdue_inspection": "Überfällige Prüfung",
+    "do_not_use": "Gerüst — Nicht benutzen",
+    "due_soon": "Prüfung bald fällig",
+    "critical": "kritisch",
+    "upcoming": "bevorstehend",
+    "days_overdue_one": "{{count}} Tag überfällig",
+    "days_overdue_other": "{{count}} Tage überfällig",
+    "failed_last": "letzte Prüfung nicht bestanden",
+    "in_days_one": "in {{count}} Tag",
+    "in_days_other": "in {{count}} Tagen"
   }
 }

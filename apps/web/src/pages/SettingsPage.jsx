@@ -8,6 +8,7 @@ import NotificationsSettingsTab from '@/pages/settings/NotificationsSettingsTab.
 import EmailPreferencesTab from '@/pages/settings/EmailPreferencesTab.jsx';
 import BillingSettingsTab from '@/pages/settings/BillingSettingsTab.jsx';
 import SecuritySettingsTab from '@/pages/settings/SecuritySettingsTab.jsx';
+import ProjectConfigTab from '@/pages/settings/ProjectConfigTab.jsx';
 
 const SettingsPage = () => {
   return (
@@ -16,6 +17,7 @@ const SettingsPage = () => {
         <Route index element={<Navigate to="profile" replace />} />
         <Route path="profile" element={<ProfileSettingsTab />} />
         <Route path="project" element={<ProjectSettingsTab />} />
+        <Route path="project-config" element={<ProjectConfigTab />} />
         <Route path="notifications" element={<NotificationsSettingsTab />} />
         <Route path="email-preferences" element={<EmailPreferencesTab />} />
         <Route path="billing" element={<BillingSettingsTab />} />

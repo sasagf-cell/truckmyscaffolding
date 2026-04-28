@@ -3,6 +3,7 @@ import { Bell, Mail, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import pb from '@/lib/pocketbaseClient';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -63,7 +64,7 @@ const RiskScoreEmailSettings = ({ projectId }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('pb_auth_token')}`,
+          Authorization: `Bearer ${pb.authStore.token}`,
         },
         body: JSON.stringify({
           risk_score_alert_enabled: enabled,

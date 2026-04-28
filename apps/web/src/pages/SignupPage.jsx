@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Info } from 'lucide-react';
+import { Info, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import Logo from '@/components/Logo.jsx';
@@ -18,6 +18,7 @@ const SignupPage = () => {
     termsAccepted: false
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
 
@@ -94,7 +95,7 @@ const SignupPage = () => {
                   value={formData.full_name}
                   onChange={handleChange}
                   required
-                  className="input-field text-foreground"
+                  className="input-field text-gray-900 bg-white"
                   placeholder="Maya Chen"
                 />
               </div>
@@ -110,7 +111,7 @@ const SignupPage = () => {
                   value={formData.company_name}
                   onChange={handleChange}
                   required
-                  className="input-field text-foreground"
+                  className="input-field text-gray-900 bg-white"
                   placeholder="Meridian Construction"
                 />
               </div>
@@ -126,7 +127,7 @@ const SignupPage = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="input-field text-foreground"
+                  className="input-field text-gray-900 bg-white"
                   placeholder="you@company.com"
                 />
               </div>
@@ -135,16 +136,27 @@ const SignupPage = () => {
                 <label htmlFor="password" className="block text-sm font-medium mb-2">
                   Password
                 </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="input-field text-foreground"
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    className="input-field text-gray-900 bg-white pr-10 w-full"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   Must be at least 8 characters and include an uppercase letter, a number, and a special character.
                 </p>
@@ -166,7 +178,7 @@ const SignupPage = () => {
                   name="vat_number"
                   value={formData.vat_number}
                   onChange={handleChange}
-                  className="input-field text-foreground"
+                  className="input-field text-gray-900 bg-white"
                   placeholder="DE123456789"
                 />
               </div>
@@ -180,7 +192,7 @@ const SignupPage = () => {
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="input-field text-foreground"
+                  className="input-field text-gray-900 bg-white"
                 >
                   <option value="Coordinator">Coordinator</option>
                   <option value="Subcontractor">Site Team</option>

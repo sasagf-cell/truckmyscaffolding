@@ -47,9 +47,12 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
       const projectData = {
         name: formData.name.trim(),
         location: formData.location.trim(),
-        description: formData.description.trim() || null,
+        description: formData.description.trim() || '',
         user_id: currentUser.id,
-        status: 'Active'
+        contract_type: 'stundenlohn',
+        inspection_interval_days: 28,
+        primary_scaffold_system: '',
+        allow_mixed_systems: false
       };
 
       const newProject = await pb.collection('projects').create(projectData, { $autoCancel: false });
@@ -70,7 +73,10 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
       onClose();
     } catch (error) {
       console.error('Error creating project:', error);
-      toast.error(error.message || 'Failed to create project');
+      console.error('PB error status:', error.status);
+      console.error('PB error data:', JSON.stringify(error.response?.data, null, 2));
+      const pbDetail = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      toast.error(`Create failed (${error.status}): ${pbDetail}`);
     } finally {
       setIsSubmitting(false);
     }

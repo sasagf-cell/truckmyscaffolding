@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
-import { User, Briefcase, Bell, CreditCard, Shield, Mail } from 'lucide-react';
+import { User, Briefcase, Bell, CreditCard, Shield, Mail, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -14,6 +14,11 @@ const navItems = [
     title: 'Project Defaults',
     href: '/dashboard/settings/project',
     icon: Briefcase
+  },
+  {
+    title: 'Project Configuration',
+    href: '/dashboard/settings/project-config',
+    icon: Settings2
   },
   {
     title: 'In-App Notifications',

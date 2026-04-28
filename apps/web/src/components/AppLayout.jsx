@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, Calendar, Package, MessageSquare, BarChart3, Users, Settings, Menu, X, Bell, ChevronDown, LogOut, Download, BookOpen, Database, ShieldCheck, Clock } from 'lucide-react';
+import { LayoutDashboard, FileText, Calendar, Package, MessageSquare, BarChart3, Users, Settings, Menu, X, ChevronDown, LogOut, Download, BookOpen, Database, ShieldCheck, Clock, Tag, Plus } from 'lucide-react';
+import NotificationBell from '@/features/notifications/components/NotificationBell';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import pb from '@/lib/pocketbaseClient';
 import {
@@ -18,6 +19,7 @@ import {
 } from '@/lib/permissions.js';
 import OfflineBanner from '@/components/OfflineBanner.jsx';
 import Logo from '@/components/Logo.jsx';
+import CreateProjectModal from '@/components/CreateProjectModal.jsx';
 
 const AppLayout = () => {
   const { t, i18n } = useTranslation();
@@ -26,7 +28,8 @@ const AppLayout = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [subcontractorRecord, setSubcontractorRecord] = useState(null);
-  
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
+
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
@@ -66,16 +69,16 @@ const AppLayout = () => {
     const fetchProjects = async () => {
       try {
         let records = [];
-        if (currentUser.role === 'Coordinator') {
+        if (currentUser.role !== 'Worker') {
           records = await pb.collection('projects').getFullList({
-            filter: `user_id = "${currentUser.id}"`,
+            filter: pb.filter('user_id = {:uid}', { uid: currentUser.id }),
             sort: '-created',
             $autoCancel: false
           });
         } else {
-          // Subcontractor: fetch projects they are assigned to
-          const subRecords = await pb.collection('subcontractors').getFullList({
-            filter: `userId = "${currentUser.id}" && status = "active"`,
+          // Site Team: fetch projects they are assigned to
+          const subRecords = await pb.collection('site_team_invites').getFullList({
+            filter: pb.filter('userId = {:uid} && status = "active"', { uid: currentUser.id }),
             expand: 'projectId',
             $autoCancel: false
           });
@@ -99,9 +102,9 @@ const AppLayout = () => {
   // Fetch subcontractor permissions when project changes
   useEffect(() => {
     const fetchPermissions = async () => {
-      if (currentUser?.role === 'Subcontractor' && selectedProject) {
+      if (currentUser?.role === 'Worker' && selectedProject) {
         try {
-          const record = await pb.collection('subcontractors').getFirstListItem(
+          const record = await pb.collection('site_team_invites').getFirstListItem(
             `userId="${currentUser.id}" && projectId="${selectedProject.id}"`, 
             { $autoCancel: false }
           );
@@ -125,6 +128,7 @@ const AppLayout = () => {
   const allNavItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), show: true },
     { path: '/scaffold-logs', icon: BookOpen, label: t('nav.logs'), show: canViewScaffoldLogs ? canViewScaffoldLogs(currentUser) : true },
+    { path: '/scaffold-tags', icon: Tag, label: 'Scaffold Tags', show: canViewScaffoldLogs ? canViewScaffoldLogs(currentUser) : true },
     { path: '/dashboard/scaffold-requests', icon: FileText, label: t('nav.requests'), show: canViewScaffoldRequests(currentUser, subcontractorRecord) },
     { path: '/dashboard/site-diary', icon: Calendar, label: t('nav.diary'), show: canViewSiteDiary(currentUser, subcontractorRecord) },
     { path: '/dashboard/material-deliveries', icon: Package, label: t('nav.deliveries'), show: canViewMaterialDeliveries(currentUser, subcontractorRecord) },
@@ -176,7 +180,7 @@ const AppLayout = () => {
                 <Download className="w-5 h-5" />
               </button>
             )}
-            <Bell className="w-6 h-6 text-muted-foreground" />
+            <NotificationBell projectId={selectedProject?.id} iconSize="w-6 h-6" />
           </div>
         </div>
       </div>
@@ -204,7 +208,7 @@ const AppLayout = () => {
               </div>
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </button>
-            {projectMenuOpen && projects.length > 0 && (
+            {projectMenuOpen && (
               <div className="mt-2 border border-border rounded-md bg-background">
                 {projects.map((project) => (
                   <button
@@ -218,6 +222,14 @@ const AppLayout = () => {
                     {project.name}
                   </button>
                 ))}
+                {currentUser?.role !== 'Worker' && (
+                  <button
+                    onClick={() => { setProjectMenuOpen(false); setCreateProjectOpen(true); }}
+                    className="w-full text-left p-2 hover:bg-muted transition-colors text-sm text-primary font-medium flex items-center gap-1 border-t border-border"
+                  >
+                    <span className="text-base leading-none">+</span> New Project
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -241,6 +253,22 @@ const AppLayout = () => {
           </nav>
 
           <div className="p-4 border-t border-border space-y-3">
+            {/* Language switcher — desktop sidebar */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => i18n.changeLanguage('en')}
+                className={`text-xs px-2 py-1 rounded font-medium transition-colors ${i18n.language === 'en' ? 'bg-primary text-black' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                EN
+              </button>
+              <button
+                onClick={() => i18n.changeLanguage('de')}
+                className={`text-xs px-2 py-1 rounded font-medium transition-colors ${i18n.language === 'de' ? 'bg-primary text-black' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                DE
+              </button>
+            </div>
+
             {isInstallable && (
               <button
                 onClick={handleInstallClick}
@@ -251,7 +279,8 @@ const AppLayout = () => {
               </button>
             )}
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-semibold overflow-hidden">
                 {currentUser?.avatar ? (
                   <img src={pb.files.getUrl(currentUser, currentUser.avatar)} alt="Avatar" className="w-full h-full object-cover" />
@@ -261,8 +290,10 @@ const AppLayout = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{currentUser?.full_name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{currentUser?.role === 'Subcontractor' ? 'Site Team' : currentUser?.role || 'User'}</p>
+                <p className="text-xs text-muted-foreground capitalize">{currentUser?.role === 'Worker' ? 'Site Team' : currentUser?.role || 'User'}</p>
               </div>
+              </div>
+              <NotificationBell projectId={selectedProject?.id} iconSize="w-5 h-5" />
             </div>
             <button
               onClick={handleLogout}
@@ -281,6 +312,17 @@ const AppLayout = () => {
         </div>
       </main>
       
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        isOpen={createProjectOpen}
+        onClose={() => setCreateProjectOpen(false)}
+        onProjectCreated={(newProject) => {
+          setProjects(prev => [newProject, ...prev]);
+          setSelectedProject(newProject);
+          setCreateProjectOpen(false);
+        }}
+      />
+
       {/* Mobile Bottom Navigation */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border z-40 flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom)]">
         {visibleNavItems.slice(0, 4).map((item) => (

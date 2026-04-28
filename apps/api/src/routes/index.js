@@ -12,6 +12,7 @@ import billingRouter from './billing.js';
 import emailRouter from './email.js';
 import workerHoursRouter from './worker-hours.js';
 import qrRouter from './qr.js';
+import subcontractorsRouter from './subcontractors.js';
 
 const router = Router();
 
@@ -28,6 +29,7 @@ export default () => {
   router.use('/billing', billingRouter);
   router.use('/email', emailRouter);
   router.use('/worker-hours', workerHoursRouter);
+  router.use('/site-team', subcontractorsRouter);
   router.use('/api', qrRouter);
 
   return router;

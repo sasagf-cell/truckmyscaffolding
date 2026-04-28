@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Send } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Send, Box } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { useScaffoldRequests } from '@/hooks/useScaffoldRequests.js';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import Scaffold3DPreview from '@/components/Scaffold3DPreview.jsx';
 import {
   Select,
   SelectContent,
@@ -26,6 +25,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from '@/hooks/use-toast';
+
+// Lazy-load Three.js 3D preview — keeps this chunk small so the form loads instantly
+const Scaffold3DPreview = lazy(() => import('@/components/Scaffold3DPreview.jsx'));
 
 const ScaffoldRequestForm = () => {
   const { id } = useParams();
@@ -305,11 +307,18 @@ const ScaffoldRequestForm = () => {
                   <span className="text-[10px] text-primary">Interactive 3D View</span>
                 </Label>
                 <div className="flex-1 min-h-[400px]">
-                  <Scaffold3DPreview 
-                    width={formData.width || 2} 
-                    length={formData.length || 3} 
-                    height={formData.height || 4} 
-                  />
+                  <Suspense fallback={
+                    <div className="w-full h-full min-h-[400px] bg-muted/20 rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                      <Box className="w-8 h-8 opacity-30 animate-pulse" />
+                      <span className="text-xs">Loading 3D preview…</span>
+                    </div>
+                  }>
+                    <Scaffold3DPreview
+                      width={formData.width || 2}
+                      length={formData.length || 3}
+                      height={formData.height || 4}
+                    />
+                  </Suspense>
                 </div>
               </div>
             </div>
@@ -370,7 +379,7 @@ const ScaffoldRequestForm = () => {
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
-                    <TableHead>Worker Role / Name</TableHead>
+                    <TableHead>Worker Code / Role</TableHead>
                     <TableHead className="w-[120px]">Hours</TableHead>
                     <TableHead className="w-[120px]">Rate (€/hr)</TableHead>
                     <TableHead className="w-[120px] text-right">Subtotal</TableHead>
@@ -384,7 +393,7 @@ const ScaffoldRequestForm = () => {
                         <Input 
                           value={worker.name}
                           onChange={(e) => handleWorkerChange(worker.id, 'name', e.target.value)}
-                          placeholder="e.g., Scaffolder Level 1"
+                          placeholder="e.g., W-001 · Scaffolder"
                         />
                       </TableCell>
                       <TableCell>
