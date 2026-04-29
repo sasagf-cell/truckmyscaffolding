@@ -6,6 +6,6 @@ set -e
 # not exist in databases created before that schema change was introduced,
 # causing a "SQL logic error: no such column: schema" crash.
 sqlite3 /pb/pb_data/data.db \
-  "INSERT OR IGNORE INTO _migrations (name) VALUES ('1673167670_multi_match_migrate.go');" || true
+  "INSERT OR IGNORE INTO _migrations (file) VALUES ('1673167670_multi_match_migrate.go');" || true
 
 exec /usr/local/bin/pocketbase serve --http=0.0.0.0:$PORT --dir=/pb/pb_data
