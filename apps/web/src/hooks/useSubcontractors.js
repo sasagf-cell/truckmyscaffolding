@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import pb from '@/lib/pocketbaseClient';
 import apiServerClient from '@/lib/apiServerClient';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export const useSubcontractors = () => {
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,6 @@ export const useSubcontractors = () => {
   const inviteSubcontractor = useCallback(async (data) => {
     setLoading(true);
     try {
-      // Use the new email-integrated backend endpoint
       const res = await apiServerClient.fetch('/site-team/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -39,34 +38,32 @@ export const useSubcontractors = () => {
           permissions: data.permissions
         })
       });
-      
+
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed to send invite');
       }
-      
+
       const result = await res.json();
 
       if (!result.emailSent && result.emailError) {
-        // Record created but email failed — still show success UI but warn user
-        toast({ title: 'Invite created', description: `Record saved but email failed: ${JSON.stringify(result.emailError)}`, variant: 'destructive' });
+        toast.warning('Invite created but email failed to send. Share the link manually.');
         console.error('Email error from server:', result.emailError);
       } else {
-        toast({ title: 'Success', description: 'Invitation sent successfully.' });
+        toast.success('Invitation sent successfully.');
       }
 
-      // Construct invite URL if not provided directly by backend
       const inviteUrl = result.inviteUrl || `${window.location.origin}/join?token=${result.inviteToken || result.subcontractorId}`;
 
       return { success: true, inviteUrl };
     } catch (err) {
       console.error('Error inviting subcontractor:', err);
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast.error(err.message || 'Failed to send invite');
       return { success: false };
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   const listSubcontractors = useCallback(async (projectId, page = 1, pageSize = 20, filters = {}) => {
     setLoading(true);
@@ -85,7 +82,7 @@ export const useSubcontractors = () => {
       });
     } catch (err) {
       console.error('Error listing subcontractors:', err);
-      toast({ title: 'Error', description: 'Failed to load team members.', variant: 'destructive' });
+      toast.error('Failed to load team members.');
       return { items: [], totalItems: 0, totalPages: 0 };
     } finally {
       setLoading(false);

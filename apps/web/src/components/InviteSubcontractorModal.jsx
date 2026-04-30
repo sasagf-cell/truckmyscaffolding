@@ -4,7 +4,7 @@ import { Copy, Download, QrCode, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useSubcontractors } from '@/hooks/useSubcontractors.js';
 import apiServerClient from '@/lib/apiServerClient.js';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,6 @@ const PERMISSIONS_LIST = [
 
 const InviteSubcontractorModal = ({ isOpen, onClose, projectId, onSuccess }) => {
   const { inviteSubcontractor, loading } = useSubcontractors();
-  const { toast } = useToast();
   const [qrCode, setQrCode] = useState(null);
   const [inviteUrl, setInviteUrl] = useState('');
   const [generatingQr, setGeneratingQr] = useState(false);
@@ -92,7 +91,7 @@ const InviteSubcontractorModal = ({ isOpen, onClose, projectId, onSuccess }) => 
       const data = await res.json();
       setQrCode(data.qrCode);
     } catch (err) {
-      toast({ title: 'Error', description: 'Failed to generate QR code', variant: 'destructive' });
+      toast.error('Failed to generate QR code');
     } finally {
       setGeneratingQr(false);
     }
