@@ -8,6 +8,7 @@ import logger from './logger.js';
 export async function runMigrations() {
   await ensureUserCustomFields();
   await ensureSiteTeamInvites();
+  await ensureSiteTeamUserIdRelation();
   await ensureEmailVerifications();
 }
 
@@ -87,7 +88,8 @@ async function ensureSiteTeamInvites() {
         { name: 'inviteToken',       type: 'text',     required: false },
         { name: 'inviteTokenExpiry', type: 'date',     required: false },
         { name: 'createdBy',         type: 'text',     required: false },
-        { name: 'userId',            type: 'text',     required: false },
+        { name: 'userId',            type: 'relation', required: false,
+          options: { collectionId: '_pb_users_auth_', maxSelect: 1, cascadeDelete: false } },
         { name: 'joinedAt',          type: 'date',     required: false },
         { name: 'message',           type: 'text',     required: false },
       ],
@@ -100,6 +102,42 @@ async function ensureSiteTeamInvites() {
     logger.info(`Collection '${COLLECTION}' created successfully`);
   } catch (err) {
     logger.error(`Failed to create collection '${COLLECTION}':`, err?.message || err);
+  }
+}
+
+async function ensureSiteTeamUserIdRelation() {
+  const COLLECTION = 'site_team_invites';
+  try {
+    const usersCollection = await pb.collections.getOne('users');
+    const siteTeam = await pb.collections.getOne(COLLECTION);
+    const fields = siteTeam.fields || siteTeam.schema || [];
+    const userIdField = fields.find(f => f.name === 'userId');
+
+    if (!userIdField) {
+      logger.warn(`${COLLECTION}.userId field not found — skipping relation upgrade`);
+      return;
+    }
+    if (userIdField.type === 'relation') {
+      logger.info(`${COLLECTION}.userId already a relation — skipping`);
+      return;
+    }
+
+    const updatedFields = fields.map(f => {
+      if (f.name === 'userId') {
+        return {
+          name: 'userId',
+          type: 'relation',
+          required: false,
+          options: { collectionId: usersCollection.id, maxSelect: 1, cascadeDelete: false }
+        };
+      }
+      return f;
+    });
+
+    await pb.collections.update(COLLECTION, { fields: updatedFields });
+    logger.info(`${COLLECTION}.userId upgraded from text → relation (users)`);
+  } catch (err) {
+    logger.error('Failed to upgrade userId to relation:', err?.message || err);
   }
 }
 
