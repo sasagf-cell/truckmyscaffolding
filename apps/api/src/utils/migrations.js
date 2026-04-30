@@ -49,9 +49,24 @@ async function ensureUserCustomFields() {
 
 async function ensureSiteTeamInvites() {
   const COLLECTION = 'site_team_invites';
+  const ROLE_VALUES = ['Supervisor', 'Warehouse Manager', 'Coordinator'];
+
   try {
-    await pb.collections.getOne(COLLECTION);
-    logger.info(`Collection '${COLLECTION}' already exists — skipping`);
+    const existing = await pb.collections.getOne(COLLECTION);
+    // Update role field values if they don't match
+    const roleField = (existing.fields || existing.schema || []).find(f => f.name === 'role');
+    const currentValues = roleField?.options?.values || [];
+    const needsUpdate = ROLE_VALUES.some(v => !currentValues.includes(v));
+    if (needsUpdate) {
+      const updatedFields = (existing.fields || existing.schema || []).map(f => {
+        if (f.name === 'role') return { ...f, options: { maxSelect: 1, values: ROLE_VALUES } };
+        return f;
+      });
+      await pb.collections.update(COLLECTION, { fields: updatedFields });
+      logger.info(`Collection '${COLLECTION}' — role values updated to: ${ROLE_VALUES.join(', ')}`);
+    } else {
+      logger.info(`Collection '${COLLECTION}' already exists — skipping`);
+    }
     return;
   } catch {
     // 404 → create it
