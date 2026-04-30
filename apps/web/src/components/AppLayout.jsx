@@ -79,10 +79,12 @@ const AppLayout = () => {
           // Site Team: fetch projects they are assigned to
           const subRecords = await pb.collection('site_team_invites').getFullList({
             filter: pb.filter('userId = {:uid} && status = "active"', { uid: currentUser.id }),
-            expand: 'projectId',
             $autoCancel: false
           });
-          records = subRecords.map(r => r.expand.projectId).filter(Boolean);
+          const projectIds = [...new Set(subRecords.map(r => r.projectId).filter(Boolean))];
+          records = (await Promise.all(
+            projectIds.map(id => pb.collection('projects').getOne(id, { $autoCancel: false }).catch(() => null))
+          )).filter(Boolean);
         }
         
         setProjects(records);
