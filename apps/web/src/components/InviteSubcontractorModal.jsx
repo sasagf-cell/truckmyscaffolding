@@ -47,7 +47,7 @@ const InviteSubcontractorModal = ({ isOpen, onClose, projectId, onSuccess }) => 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm({
     defaultValues: {
       email: '',
-      role: 'Worker',
+      role: 'Supervisor',
       permissions: ['view_scaffold_requests', 'view_site_diary'],
       message: ''
     }
@@ -138,13 +138,13 @@ const InviteSubcontractorModal = ({ isOpen, onClose, projectId, onSuccess }) => 
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Role *</Label>
-                <Select onValueChange={(val) => setValue('role', val)} defaultValue="Worker">
+                <Select onValueChange={(val) => setValue('role', val)} defaultValue="Supervisor">
                   <SelectTrigger>
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Worker">Site Team — Worker</SelectItem>
-                    <SelectItem value="Supervisor">Site Team — Supervisor</SelectItem>
+                    <SelectItem value="Supervisor">Supervisor</SelectItem>
+                    <SelectItem value="Warehouse Manager">Warehouse Manager</SelectItem>
                     <SelectItem value="Coordinator">Coordinator</SelectItem>
                   </SelectContent>
                 </Select>

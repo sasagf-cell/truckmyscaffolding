@@ -65,7 +65,7 @@ async function ensureSiteTeamInvites() {
         { name: 'projectId',         type: 'text',     required: true },
         { name: 'email',             type: 'email',    required: true },
         { name: 'role',              type: 'select',   required: true,
-          options: { maxSelect: 1, values: ['Foreman', 'Scaffolder', 'Helper', 'Warehouse Manager'] } },
+          options: { maxSelect: 1, values: ['Supervisor', 'Warehouse Manager', 'Coordinator'] } },
         { name: 'status',            type: 'select',   required: false,
           options: { maxSelect: 1, values: ['pending_invite', 'active', 'revoked'] } },
         { name: 'permissions',       type: 'json',     required: false },
