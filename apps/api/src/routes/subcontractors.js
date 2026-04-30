@@ -172,7 +172,8 @@ router.post('/join', async (req, res, next) => {
         plan: 'free',
         language: 'EN',
         unsubscribeToken: crypto.randomBytes(16).toString('hex'),
-        emailVisibility: true
+        emailVisibility: true,
+        verified: true,
       });
       userId = newUser.id;
     }

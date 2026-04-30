@@ -1,7 +1,8 @@
 import express from 'express';
+import crypto from 'crypto';
 import pb from '../utils/pocketbaseClient.js';
-import { hashPassword } from '../utils/password.js';
 import { generateToken, generateResetToken, verifyResetToken } from '../utils/jwt.js';
+import { sendEmail, buildVerificationEmail } from '../utils/mailer.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -16,43 +17,100 @@ router.post('/register', async (req, res) => {
 
   try {
     // Check if user already exists
-    const existingUsers = await pb.collection('users').getFullList({
-      filter: `email = "${email}"`,
-    });
+    let existingUsers = [];
+    try {
+      existingUsers = await pb.collection('users').getFullList({
+        filter: pb.filter('email = {:email}', { email }),
+      });
+    } catch {}
 
     if (existingUsers.length > 0) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    const hashedPassword = await hashPassword(password);
-
+    // Create user via superuser — PocketBase handles password hashing internally
+    // verified: false until email is confirmed
     const user = await pb.collection('users').create({
       email,
-      password: hashedPassword,
-      passwordConfirm: hashedPassword,
+      password,
+      passwordConfirm: password,
       full_name,
+      name: full_name,
       company_name: company_name || '',
       vat_number: vat_number || '',
-      role: role || 'user',
+      role: role || 'Coordinator',
       language: language || 'en',
       plan: 'free',
+      emailVisibility: true,
+      verified: false,
     });
 
-    const token = generateToken(user);
+    // Generate verification token and store in email_verifications collection
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 24);
+
+    await pb.collection('email_verifications').create({
+      userId: user.id,
+      email: user.email,
+      token: verificationToken,
+      expires: expires.toISOString(),
+      used: false,
+    });
+
+    // Send verification email
+    const verifyUrl = `${process.env.FRONTEND_URL || 'https://trackmyscaffolding.com'}/verify-email?token=${verificationToken}`;
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Verify your TrackMyScaffolding account',
+        html: buildVerificationEmail({ verifyUrl, full_name }),
+      });
+    } catch (emailErr) {
+      logger.error('Failed to send verification email:', emailErr?.message);
+    }
+
+    logger.info(`User registered: ${user.id} (${email}) — verification email sent`);
 
     res.status(201).json({
-      user: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        role: user.role,
-        plan: user.plan,
-      },
-      token,
+      success: true,
+      message: 'Registration successful. Please check your email to verify your account.',
     });
   } catch (error) {
     logger.error('Registration error:', error.message);
+    if (error?.response?.data) {
+      return res.status(400).json({ error: JSON.stringify(error.response.data) });
+    }
     throw error;
+  }
+});
+
+// GET /auth/verify-email?token=...
+router.get('/verify-email', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: 'Token is required' });
+
+  try {
+    const record = await pb.collection('email_verifications').getFirstListItem(
+      pb.filter('token = {:token} && used = false', { token })
+    );
+
+    if (new Date(record.expires) < new Date()) {
+      return res.status(400).json({ error: 'Verification link has expired' });
+    }
+
+    // Mark user as verified
+    await pb.collection('users').update(record.userId, { verified: true });
+
+    // Mark token as used
+    await pb.collection('email_verifications').update(record.id, { used: true });
+
+    logger.info(`User ${record.userId} verified email`);
+
+    res.json({ success: true, message: 'Email verified successfully. You can now log in.' });
+  } catch (error) {
+    logger.error('Email verification error:', error?.message);
+    res.status(400).json({ error: 'Invalid or expired verification link' });
   }
 });
 

@@ -7,6 +7,7 @@ import logger from './logger.js';
  */
 export async function runMigrations() {
   await ensureSiteTeamInvites();
+  await ensureEmailVerifications();
 }
 
 async function ensureSiteTeamInvites() {
@@ -43,6 +44,39 @@ async function ensureSiteTeamInvites() {
       createRule: '@request.auth.id != ""',
       updateRule: '@request.auth.id != ""',
       deleteRule: '@request.auth.id != ""',
+    });
+    logger.info(`Collection '${COLLECTION}' created successfully`);
+  } catch (err) {
+    logger.error(`Failed to create collection '${COLLECTION}':`, err?.message || err);
+  }
+}
+
+async function ensureEmailVerifications() {
+  const COLLECTION = 'email_verifications';
+  try {
+    await pb.collections.getOne(COLLECTION);
+    logger.info(`Collection '${COLLECTION}' already exists — skipping`);
+    return;
+  } catch {
+    // 404 → create it
+  }
+
+  try {
+    await pb.collections.create({
+      name: COLLECTION,
+      type: 'base',
+      fields: [
+        { name: 'userId',    type: 'text',    required: true },
+        { name: 'email',     type: 'email',   required: true },
+        { name: 'token',     type: 'text',    required: true },
+        { name: 'expires',   type: 'date',    required: true },
+        { name: 'used',      type: 'bool',    required: false },
+      ],
+      listRule:   null,
+      viewRule:   null,
+      createRule: null,
+      updateRule: null,
+      deleteRule: null,
     });
     logger.info(`Collection '${COLLECTION}' created successfully`);
   } catch (err) {

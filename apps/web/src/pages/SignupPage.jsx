@@ -19,6 +19,7 @@ const SignupPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
 
@@ -55,8 +56,13 @@ const SignupPage = () => {
     setLoading(true);
 
     try {
-      await signup(formData);
-      toast.success('Account created successfully');
+      const result = await signup(formData);
+      if (result?.emailVerificationSent) {
+        toast.success('Check your email to verify your account!');
+        // Stay on page — show success message
+        setEmailSent(true);
+        return;
+      }
       window.location.href = '/onboarding';
     } catch (error) {
       toast.error(error.message || 'Failed to create account');
@@ -64,6 +70,41 @@ const SignupPage = () => {
       setLoading(false);
     }
   };
+
+  if (emailSent) {
+    return (
+      <>
+        <Helmet>
+          <title>Check your email - TrackMyScaffolding</title>
+        </Helmet>
+        <div className="min-h-screen flex items-center justify-center bg-muted py-12 px-4">
+          <div className="w-full max-w-md text-center">
+            <Link to="/" className="inline-block mb-6">
+              <Logo variant="light" />
+            </Link>
+            <div className="card space-y-4">
+              <div className="text-5xl">📧</div>
+              <h1 className="text-2xl font-bold">Check your email</h1>
+              <p className="text-muted-foreground">
+                We've sent a verification link to <strong>{formData.email}</strong>.
+                Click the link in the email to activate your account.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Didn't receive it? Check your spam folder or{' '}
+                <button
+                  onClick={() => setEmailSent(false)}
+                  className="text-primary hover:underline"
+                >
+                  try again
+                </button>
+                .
+              </p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

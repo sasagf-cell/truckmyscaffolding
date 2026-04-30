@@ -55,6 +55,7 @@ const MaterialMasterDataPage = React.lazy(() => import('@/pages/MaterialMasterDa
 const SafetyInspectionsPage = React.lazy(() => import('@/features/inspections/src/SafetyInspectionsPage.jsx'));
 const WorkerHoursPage = React.lazy(() => import('@/pages/WorkerHoursPage.jsx'));
 const JoinProjectPage = React.lazy(() => import('@/pages/JoinProjectPage.jsx'));
+const VerifyEmailPage = React.lazy(() => import('@/pages/VerifyEmailPage.jsx'));
 
 
 const LoadingFallback = () => (
@@ -115,6 +116,7 @@ function AppContent() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/join" element={<JoinProjectPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/unsubscribe-success" element={<UnsubscribeSuccessPage />} />
             <Route path="/dev/seo-audit" element={<SEOAuditPage />} />
             

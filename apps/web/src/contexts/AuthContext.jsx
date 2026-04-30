@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import pb from '@/lib/pocketbaseClient';
+import apiServerClient from '@/lib/apiServerClient';
 
 const AuthContext = createContext();
 
@@ -46,38 +47,28 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signup = async (userData) => {
-    try {
-      const createData = {
+    // Register via Railway API — creates user with verified:false, sends verification email
+    const res = await apiServerClient.fetch('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         email: userData.email,
         password: userData.password,
-        passwordConfirm: userData.password,
         full_name: userData.full_name || userData.name || '',
-        name: userData.name || userData.full_name || '',
-        company_name: userData.company_name,
+        company_name: userData.company_name || '',
         vat_number: userData.vat_number || '',
         role: userData.role || 'Coordinator',
         language: userData.language || 'en',
-        plan: 'free',
-        unsubscribeToken: crypto.randomUUID()
-      };
-      
-      console.log('Sending registration data to PocketBase:', createData);
-      
-      const record = await pb.collection('users').create(createData, { $autoCancel: false });
-      console.log('User created successfully:', record);
+      }),
+    });
 
-      const authData = await pb.collection('users').authWithPassword(userData.email, userData.password, { $autoCancel: false });
-      setCurrentUser(authData.record);
-      return authData.record;
-    } catch (error) {
-      console.error('=== POCKETBASE REGISTRATION ERROR ===');
-      console.error('Full error object:', error);
-      console.error('Error message:', error.message);
-      console.error('FULL PB ERROR:', error.response?.data);
-      console.error('Error status:', error.status);
-      console.error('Error details:', JSON.stringify(error.response?.data, null, 2));
-      throw error;
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Registration failed');
     }
+
+    // Return signal that verification email was sent (no auto-login)
+    return { emailVerificationSent: true };
   };
 
   const logout = () => {
