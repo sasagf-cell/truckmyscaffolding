@@ -89,12 +89,61 @@ export const useSubcontractors = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
+
+  const getSubcontractor = useCallback(async (id) => {
+    setLoading(true);
+    try {
+      return await pb.collection('site_team_invites').getOne(id, {
+        expand: 'userId',
+        $autoCancel: false
+      });
+    } catch (err) {
+      console.error('Error fetching subcontractor:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deactivateSubcontractor = useCallback(async (id, currentStatus) => {
+    setLoading(true);
+    try {
+      const newStatus = currentStatus === 'active' ? 'revoked' : 'active';
+      await pb.collection('site_team_invites').update(id, { status: newStatus }, { $autoCancel: false });
+      toast.success(`Member ${newStatus === 'active' ? 'reactivated' : 'deactivated'} successfully.`);
+      return true;
+    } catch (err) {
+      console.error('Error updating status:', err);
+      toast.error('Failed to update member status.');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const removeSubcontractor = useCallback(async (id) => {
+    setLoading(true);
+    try {
+      await pb.collection('site_team_invites').delete(id, { $autoCancel: false });
+      toast.success('Member removed from project.');
+      return true;
+    } catch (err) {
+      console.error('Error removing subcontractor:', err);
+      toast.error('Failed to remove member.');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   return {
     loading,
     fetchSubcontractors,
     listSubcontractors,
-    inviteSubcontractor
+    inviteSubcontractor,
+    getSubcontractor,
+    deactivateSubcontractor,
+    removeSubcontractor
   };
 };
