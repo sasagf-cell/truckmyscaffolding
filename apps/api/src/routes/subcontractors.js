@@ -103,9 +103,7 @@ router.get('/validate-token/:token', async (req, res, next) => {
   const { token } = req.params;
 
   try {
-    const record = await pb.collection('site_team_invites').getFirstListItem(`inviteToken="${token}"`, {
-      expand: 'projectId,createdBy'
-    });
+    const record = await pb.collection('site_team_invites').getFirstListItem(`inviteToken="${token}"`);
 
     if (new Date(record.inviteTokenExpiry) < new Date()) {
       return res.status(400).json({ valid: false, error: 'Token has expired' });
@@ -115,13 +113,25 @@ router.get('/validate-token/:token', async (req, res, next) => {
       return res.status(400).json({ valid: false, error: 'Invitation has already been used or revoked' });
     }
 
+    // Fetch project and coordinator separately (fields are text, not relations)
+    let project = { name: 'Unknown Project' };
+    let coordinator = { full_name: 'Project Coordinator' };
+    try {
+      const proj = await pb.collection('projects').getOne(record.projectId);
+      project = { id: proj.id, name: proj.name };
+    } catch {}
+    try {
+      const coord = await pb.collection('users').getOne(record.createdBy);
+      coordinator = { id: coord.id, full_name: coord.full_name || coord.name };
+    } catch {}
+
     res.json({
       valid: true,
       email: record.email,
       role: record.role,
       permissions: record.permissions,
-      project: record.expand?.projectId || { name: 'Unknown Project' },
-      coordinator: record.expand?.createdBy || { full_name: 'Project Coordinator' }
+      project,
+      coordinator,
     });
   } catch (error) {
     res.status(400).json({ valid: false, error: 'Invite link is invalid or has expired' });
