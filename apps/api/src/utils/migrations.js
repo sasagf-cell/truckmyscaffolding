@@ -28,7 +28,10 @@ async function ensureUserCustomFields() {
 
   try {
     const collection = await pb.collections.getOne('users');
-    const existingNames = (collection.fields || collection.schema || []).map(f => f.name);
+    // Only non-system custom fields (exclude id, password, tokenKey, email, emailVisibility, verified, created, updated)
+    const SYSTEM_FIELD_NAMES = new Set(['id', 'password', 'tokenKey', 'email', 'emailVisibility', 'verified', 'created', 'updated']);
+    const existingFields = (collection.fields || collection.schema || []).filter(f => !f.system && !SYSTEM_FIELD_NAMES.has(f.name));
+    const existingNames = existingFields.map(f => f.name);
     const toAdd = REQUIRED_FIELDS.filter(f => !existingNames.includes(f.name));
 
     if (toAdd.length === 0) {
@@ -36,7 +39,7 @@ async function ensureUserCustomFields() {
       return;
     }
 
-    const updatedFields = [...(collection.fields || collection.schema || []), ...toAdd];
+    const updatedFields = [...existingFields, ...toAdd];
     await pb.collections.update('users', { fields: updatedFields });
     logger.info(`users collection — added fields: ${toAdd.map(f => f.name).join(', ')}`);
   } catch (err) {
