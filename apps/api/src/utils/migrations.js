@@ -6,8 +6,42 @@ import logger from './logger.js';
  * Safe to run on every startup — skips if collection already exists.
  */
 export async function runMigrations() {
+  await ensureUserCustomFields();
   await ensureSiteTeamInvites();
   await ensureEmailVerifications();
+}
+
+async function ensureUserCustomFields() {
+  const REQUIRED_FIELDS = [
+    { name: 'full_name',             type: 'text',   required: false },
+    { name: 'company_name',          type: 'text',   required: false },
+    { name: 'vat_number',            type: 'text',   required: false },
+    { name: 'role',                  type: 'select', required: false,
+      options: { maxSelect: 1, values: ['Coordinator', 'Subcontractor'] } },
+    { name: 'plan',                  type: 'select', required: false,
+      options: { maxSelect: 1, values: ['free', 'pro', 'enterprise'] } },
+    { name: 'language',              type: 'text',   required: false },
+    { name: 'unsubscribeToken',      type: 'text',   required: false },
+    { name: 'reset_token',           type: 'text',   required: false },
+    { name: 'reset_token_expires',   type: 'date',   required: false },
+  ];
+
+  try {
+    const collection = await pb.collections.getOne('users');
+    const existingNames = (collection.fields || collection.schema || []).map(f => f.name);
+    const toAdd = REQUIRED_FIELDS.filter(f => !existingNames.includes(f.name));
+
+    if (toAdd.length === 0) {
+      logger.info('users collection — custom fields already exist, skipping');
+      return;
+    }
+
+    const updatedFields = [...(collection.fields || collection.schema || []), ...toAdd];
+    await pb.collections.update('users', { fields: updatedFields });
+    logger.info(`users collection — added fields: ${toAdd.map(f => f.name).join(', ')}`);
+  } catch (err) {
+    logger.error('Failed to update users collection schema:', err?.message || err);
+  }
 }
 
 async function ensureSiteTeamInvites() {
