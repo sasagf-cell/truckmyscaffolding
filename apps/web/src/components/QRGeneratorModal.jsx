@@ -78,7 +78,7 @@ const QRGeneratorModal = ({ open, onOpenChange, project }) => {
         </DialogHeader>
 
         <p className="text-sm text-muted-foreground">
-          Generate a QR code for <strong>{project?.name}</strong>. Subcontractors scan it to join instantly.
+          Generate a QR code for <strong>{project?.name}</strong>. Site Team members scan it to join instantly.
         </p>
 
         {!joinUrl ? (

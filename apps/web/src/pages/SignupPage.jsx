@@ -236,7 +236,7 @@ const SignupPage = () => {
                   className="input-field text-gray-900 bg-white"
                 >
                   <option value="Coordinator">Coordinator</option>
-                  <option value="Subcontractor">Site Team</option>
+                  <option value="Site Team">Site Team</option>
                 </select>
               </div>
 

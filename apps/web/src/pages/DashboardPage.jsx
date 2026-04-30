@@ -236,7 +236,7 @@ const DashboardPage = () => {
   }
 
   if (!selectedProject) {
-    const isSubcontractor = currentUser?.role === 'Subcontractor';
+    const isSubcontractor = currentUser?.role === 'Site Team';
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">
         <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">

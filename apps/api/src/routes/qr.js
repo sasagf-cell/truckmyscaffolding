@@ -69,7 +69,7 @@ router.post('/join/:token/accept', authMiddleware, async (req, res) => {
         userId: req.user.id,
         projectId: record.project_id,
         status: 'active',
-        role: 'Subcontractor',
+        role: 'Site Team',
         permissions: ['view_scaffold_requests', 'create_scaffold_requests', 'view_site_diary', 'view_material_deliveries']
       });
     }

@@ -17,7 +17,7 @@ async function ensureUserCustomFields() {
     { name: 'company_name',          type: 'text',   required: false },
     { name: 'vat_number',            type: 'text',   required: false },
     { name: 'role',                  type: 'select', required: false,
-      options: { maxSelect: 1, values: ['Coordinator', 'Subcontractor'] } },
+      options: { maxSelect: 1, values: ['Coordinator', 'Site Team'] } },
     { name: 'plan',                  type: 'select', required: false,
       options: { maxSelect: 1, values: ['free', 'pro', 'enterprise'] } },
     { name: 'language',              type: 'text',   required: false },
