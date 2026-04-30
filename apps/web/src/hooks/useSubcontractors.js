@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 
 export const useSubcontractors = () => {
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
 
   const fetchSubcontractors = useCallback(async (projectId) => {
     setLoading(true);
