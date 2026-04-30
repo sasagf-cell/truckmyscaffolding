@@ -168,7 +168,7 @@ router.post('/join', async (req, res, next) => {
         passwordConfirm: password,
         full_name,
         name: full_name,
-        role: 'Worker',
+        role: 'Site Team',
         plan: 'free',
         language: 'EN',
         unsubscribeToken: crypto.randomBytes(16).toString('hex'),
