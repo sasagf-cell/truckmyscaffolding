@@ -49,8 +49,7 @@ const SubcontractorDetailPage = () => {
     switch (status) {
       case 'active': return <Badge className="badge-active">Active</Badge>;
       case 'pending_invite': return <Badge className="badge-invited">Invited</Badge>;
-      case 'inactive': return <Badge className="badge-inactive">Inactive</Badge>;
-      case 'removed': return <Badge className="badge-removed">Removed</Badge>;
+      case 'revoked': return <Badge className="badge-inactive">Revoked</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };

@@ -107,8 +107,8 @@ const SubcontractorListPage = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="Worker">Worker</SelectItem>
               <SelectItem value="Supervisor">Supervisor</SelectItem>
+              <SelectItem value="Warehouse Manager">Warehouse Manager</SelectItem>
               <SelectItem value="Coordinator">Coordinator</SelectItem>
             </SelectContent>
           </Select>
