@@ -69,7 +69,7 @@ const AppLayout = () => {
     const fetchProjects = async () => {
       try {
         let records = [];
-        if (currentUser.role !== 'Worker') {
+        if (currentUser.role === 'Coordinator') {
           records = await pb.collection('projects').getFullList({
             filter: pb.filter('user_id = {:uid}', { uid: currentUser.id }),
             sort: '-created',
@@ -224,7 +224,7 @@ const AppLayout = () => {
                     {project.name}
                   </button>
                 ))}
-                {currentUser?.role !== 'Worker' && (
+                {currentUser?.role === 'Coordinator' && (
                   <button
                     onClick={() => { setProjectMenuOpen(false); setCreateProjectOpen(true); }}
                     className="w-full text-left p-2 hover:bg-muted transition-colors text-sm text-primary font-medium flex items-center gap-1 border-t border-border"
