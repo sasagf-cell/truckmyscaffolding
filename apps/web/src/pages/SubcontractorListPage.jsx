@@ -165,7 +165,7 @@ const SubcontractorListPage = () => {
                   onClick={() => navigate(`/dashboard/team/${sub.id}`)}
                 >
                   <TableCell className="font-medium">
-                    {sub.expand?.userId?.full_name || <span className="text-muted-foreground italic">Pending Registration</span>}
+                    {sub.expand?.userId?.full_name || sub.email}
                   </TableCell>
                   <TableCell>{sub.email}</TableCell>
                   <TableCell>{sub.role}</TableCell>

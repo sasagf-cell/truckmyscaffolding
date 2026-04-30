@@ -88,7 +88,7 @@ const SubcontractorDetailPage = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-              {user?.full_name || 'Pending Registration'}
+              {user?.full_name || subcontractor.email}
               {getStatusBadge(subcontractor.status)}
             </h1>
             <p className="text-muted-foreground">{subcontractor.role}</p>
