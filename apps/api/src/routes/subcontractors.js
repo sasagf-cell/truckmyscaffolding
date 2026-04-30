@@ -74,6 +74,12 @@ router.post('/invite', authMiddleware, async (req, res, next) => {
     });
   } catch (err) {
     logger.error('Invite error:', err?.message || err);
+    logger.error('Invite error details:', JSON.stringify(err?.data || err?.response?.data || {}));
+    // Return PocketBase validation details directly
+    const pbError = err?.data || err?.response?.data;
+    if (pbError) {
+      return res.status(400).json({ error: JSON.stringify(pbError) });
+    }
     next(err);
   }
 });
