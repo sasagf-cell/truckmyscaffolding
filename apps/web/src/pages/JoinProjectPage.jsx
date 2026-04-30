@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 
-const API_BASE = '/hcgi/api';
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 const JoinProjectPage = () => {
   const [searchParams] = useSearchParams();
