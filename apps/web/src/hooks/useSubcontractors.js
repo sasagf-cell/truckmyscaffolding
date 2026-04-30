@@ -39,8 +39,11 @@ export const useSubcontractors = () => {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to send invite');
+        const errBody = await res.json();
+        const msg = typeof errBody.error === 'string'
+          ? errBody.error
+          : errBody.message || JSON.stringify(errBody.error) || 'Failed to send invite';
+        throw new Error(msg);
       }
 
       const result = await res.json();
